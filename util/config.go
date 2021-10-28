@@ -21,6 +21,12 @@ type MysqlConfig struct {
 	Source string
 }
 
+type RedisConfig struct {
+	Address string
+	Passwd  string
+	DB      int
+}
+
 var (
 	emailCfg  *EmailConfig
 	emailOnce sync.Once
@@ -30,6 +36,9 @@ var (
 
 	mysqlCfg  *MysqlConfig
 	mysqlOnce sync.Once
+
+	redisCfg  *RedisConfig
+	redisOnce sync.Once
 
 	cfg        *ini.File
 	configOnce sync.Once
@@ -100,4 +109,26 @@ func LoadMysqlCfg() *MysqlConfig {
 		})
 	}
 	return mysqlCfg
+}
+
+func LoadRedisCfg() *RedisConfig {
+	if redisCfg == nil {
+		loadConfig()
+		redisOnce.Do(func() {
+			section, err := cfg.GetSection("redis")
+			if err != nil {
+				panic(err)
+			}
+			db, err := strconv.Atoi(section.Key("db").Value())
+			if err != nil {
+				panic(err)
+			}
+			redisCfg = &RedisConfig{
+				Address: section.Key("address").Value(),
+				Passwd:  section.Key("passwd").Value(),
+				DB:      db,
+			}
+		})
+	}
+	return redisCfg
 }

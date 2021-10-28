@@ -2,11 +2,13 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"idea_server/redisdb"
 	"idea_server/util"
 )
 
 func main() {
 	//gin.SetMode(gin.ReleaseMode)
+	redisdb.ExampleClient()
 	//r := route.New()
 	//r.AddPostRoute("/register", registerHandler)
 	//r.AddAuthGetRoute("/device", devicesHandler)
