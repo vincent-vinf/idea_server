@@ -1,10 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
+	"idea_server/db"
 	"idea_server/redisdb"
 	"idea_server/route"
 	"idea_server/util"
@@ -13,16 +12,13 @@ import (
 	"time"
 )
 
-const (
-	codeExpiration = time.Minute * 10 // 验证码有效期
-	codeForbidden  = time.Minute      // 验证码重复发送时间
-)
-
 var (
 	emailRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 func main() {
+	db.Close()
+	redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
 	r := route.New()
 	r.AddPostRoute("/register", registerHandler)
@@ -34,19 +30,42 @@ func registerHandler(c *gin.Context) {
 	email := c.PostForm("email")
 	password := c.PostForm("password")
 	code := c.PostForm("code")
-	if email == "" || password == "" || code == "" || !util.CheckEmail(email) {
+	if email == "" || password == "" || code == "" || !util.IsEmail(email) {
 		c.JSON(400, gin.H{
 			"error": "Bad request parameter",
 		})
 		return
 	}
 
-	if !isAvailableEmailCode(email, code) {
+	if !util.IsStrongPasswd(password) {
+		c.JSON(400, gin.H{
+			"error": "Weak password",
+		})
+		return
+	}
+
+	if !redisdb.IsAvailableEmailCode(email, code) {
 		c.JSON(400, gin.H{
 			"error": "The verification code does not exist or has expired",
 		})
 		return
 	}
+
+	isExist, err := db.IsExistEmail(email)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "Server internal error",
+		})
+		return
+	}
+	if isExist {
+		c.JSON(400, gin.H{
+			"error": "Email already exists",
+		})
+		return
+	}
+
 	c.JSON(200, gin.H{
 		"email": "ok",
 	})
@@ -54,13 +73,13 @@ func registerHandler(c *gin.Context) {
 
 func emailCodeHandler(c *gin.Context) {
 	email := c.Query("email")
-	if email == "" || !util.CheckEmail(email) {
+	if email == "" || !util.IsEmail(email) {
 		c.JSON(400, gin.H{
 			"error": "Bad request parameter",
 		})
 		return
 	}
-	if !isAllowedIP(c.ClientIP()) {
+	if !redisdb.IsAllowedIP(c.ClientIP()) {
 		c.JSON(403, gin.H{
 			"error": "Request too frequent",
 		})
@@ -77,43 +96,11 @@ func emailCodeHandler(c *gin.Context) {
 		return
 	}
 	// 插入验证码到redis
-	insertEmailCode(email, code, c.ClientIP())
+	redisdb.InsertEmailCode(email, code, c.ClientIP())
 	log.Println("code: ", code)
 	c.JSON(200, gin.H{
 		"msg": "ok",
 	})
-}
-
-func insertEmailCode(email, code, ip string) {
-	rdb := redisdb.GetInstance()
-	ctx := context.Background()
-	// 插入验证码和请求的ip，防止过多请求
-	rdb.Set(ctx, email, code, codeExpiration)
-	rdb.Set(ctx, ip, ip, codeForbidden)
-}
-
-func isAvailableEmailCode(email, code string) bool {
-	rdb := redisdb.GetInstance()
-	ctx := context.Background()
-	re, err := rdb.Get(ctx, email).Result()
-	if err != nil {
-		return false
-	}
-	if re != code {
-		return false
-	}
-	return true
-}
-
-func isAllowedIP(ip string) bool {
-	rdb := redisdb.GetInstance()
-	ctx := context.Background()
-	_, err := rdb.Get(ctx, ip).Result()
-	if err == redis.Nil {
-		return true
-	} else {
-		return false
-	}
 }
 
 //func devicesHandler(c *gin.Context) {

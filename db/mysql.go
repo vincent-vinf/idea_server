@@ -13,6 +13,7 @@ var (
 	once sync.Once
 )
 
+// mysql 务必预编译sql语句
 func getInstance() *sql.DB {
 	if db == nil {
 		once.Do(func() {
@@ -28,4 +29,28 @@ func getInstance() *sql.DB {
 		})
 	}
 	return db
+}
+
+func Close() {
+	if db != nil {
+		_ = db.Close()
+	}
+}
+
+func IsExistEmail(mail string) (bool, error) {
+	db := getInstance()
+	stmt, _ := db.Prepare("select id from users where email = ?")
+	rows, err := stmt.Query(mail)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		return true, nil
+	}
+	return false, nil
+}
+
+func Register(email, passwd string) {
+
 }
