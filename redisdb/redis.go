@@ -11,7 +11,7 @@ var (
 	once sync.Once
 )
 
-func getInstance() *redis.Client {
+func GetInstance() *redis.Client {
 	if rdb == nil {
 		once.Do(func() {
 			cfg := util.LoadRedisCfg()
@@ -26,10 +26,7 @@ func getInstance() *redis.Client {
 }
 
 //func ExampleClient() {
-//	err := rdb.Set(ctx, "key", "value", 0).Err()
-//	if err != nil {
-//		panic(err)
-//	}
+
 //
 //	val, err := rdb.Get(ctx, "key").Result()
 //	if err != nil {
