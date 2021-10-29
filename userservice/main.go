@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"idea_server/db"
+	"idea_server/myjwt"
 	"idea_server/redisdb"
 	"idea_server/route"
 	"idea_server/util"
@@ -24,6 +25,7 @@ func main() {
 	r := route.New()
 	r.AddPostRoute("/register", registerHandler)
 	r.AddGetRoute("/email/code", emailCodeHandler)
+	r.AddAuthGetRoute("/userinfo", userinfoHandler)
 	r.Run(":8000")
 }
 
@@ -63,7 +65,7 @@ func registerHandler(c *gin.Context) {
 	}
 	if isExist {
 		c.JSON(400, gin.H{
-			"error": "Email already exists",
+			"error": "ID already exists",
 		})
 		return
 	}
@@ -114,13 +116,11 @@ func emailCodeHandler(c *gin.Context) {
 	})
 }
 
-//func devicesHandler(c *gin.Context) {
-//	//claims := jwt.ExtractClaims(c)
-//	//userid := claims[util.IdentityKey].(string)
-//
-//	t, _ := c.Get(util.IdentityKey)
-//	user := t.(*util.tokenUserInfo)
-//	c.JSON(200, gin.H{
-//		"email": user.Email,
-//	})
-//}
+func userinfoHandler(c *gin.Context) {
+	t, _ := c.Get(myjwt.IdentityKey)
+	user := t.(*myjwt.TokenUserInfo)
+
+	c.JSON(200, gin.H{
+		"id": user.ID,
+	})
+}

@@ -1,4 +1,4 @@
-package jwt
+package myjwt
 
 import (
 	"errors"
@@ -20,12 +20,12 @@ type login struct {
 }
 
 // 结构体中的数据将会编码进token
-type tokenUserInfo struct {
-	Email string
+type TokenUserInfo struct {
+	ID string
 }
 
 const (
-	IdentityKey     = "email"
+	IdentityKey     = "id"
 	appRealm        = "idea"
 	tokenTimeout    = time.Hour * 1
 	tokenMaxRefresh = time.Hour * 2
@@ -41,18 +41,17 @@ func Init() (*jwt.GinJWTMiddleware, error) {
 		MaxRefresh:  tokenMaxRefresh,
 		IdentityKey: IdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
-			if v, ok := data.(*tokenUserInfo); ok {
+			if v, ok := data.(*TokenUserInfo); ok {
 				return jwt.MapClaims{
-					IdentityKey: v.Email,
+					IdentityKey: v.ID,
 				}
 			}
 			return jwt.MapClaims{}
 		},
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			log.Println(claims[IdentityKey].(string))
-			return &tokenUserInfo{
-				Email: claims[IdentityKey].(string),
+			return &TokenUserInfo{
+				ID: claims[IdentityKey].(string),
 			}
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
@@ -69,8 +68,14 @@ func Init() (*jwt.GinJWTMiddleware, error) {
 			}
 
 			if (code != "" && redisdb.IsCorrectEmailCode(email, code)) || (password != "" && db.Login(email, password)) {
-				u := &tokenUserInfo{
-					Email: email,
+				id, err := db.GetID(email)
+				if err != nil {
+					log.Println(err)
+					return nil, jwt.ErrFailedAuthentication
+				}
+				log.Println(id)
+				u := &TokenUserInfo{
+					ID: id,
 				}
 				return u, nil
 			}

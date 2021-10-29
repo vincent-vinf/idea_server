@@ -2,7 +2,7 @@ package route
 
 import (
 	"github.com/gin-gonic/gin"
-	"idea_server/jwt"
+	"idea_server/myjwt"
 	"log"
 )
 
@@ -25,7 +25,7 @@ func New() *Route {
 	})
 
 	// 初始化JWT中间件
-	authMiddleware, err := jwt.Init()
+	authMiddleware, err := myjwt.Init()
 	if err != nil {
 		log.Fatal(err)
 	}

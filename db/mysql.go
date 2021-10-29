@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	_ "github.com/go-sql-driver/mysql"
 	"idea_server/util"
 	"log"
@@ -73,8 +74,29 @@ func Login(email, passwd string) bool {
 		log.Println(err)
 		return false
 	}
+	defer rows.Close()
 	if rows.Next() {
 		return true
 	}
 	return false
+}
+
+func GetID(email string) (string, error) {
+	db := getInstance()
+	stmt, _ := db.Prepare("select id from users where email = ?")
+	defer stmt.Close()
+	rows, err := stmt.Query(email)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var id string
+		err := rows.Scan(&id)
+		if err != nil {
+			return "", err
+		}
+		return id, nil
+	}
+	return "", errors.New("does not exist")
 }
