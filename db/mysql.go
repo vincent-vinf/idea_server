@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"idea_server/util"
+	"log"
 	"sync"
 	"time"
 )
@@ -40,6 +41,7 @@ func Close() {
 func IsExistEmail(mail string) (bool, error) {
 	db := getInstance()
 	stmt, _ := db.Prepare("select id from users where email = ?")
+	defer stmt.Close()
 	rows, err := stmt.Query(mail)
 	if err != nil {
 		return false, err
@@ -51,6 +53,28 @@ func IsExistEmail(mail string) (bool, error) {
 	return false, nil
 }
 
-func Register(email, passwd string) {
+func Register(username, email, passwd string) error {
+	db := getInstance()
+	stmt, _ := db.Prepare("insert into users (username, email, passwd) VALUES (?,?,?)")
+	defer stmt.Close()
+	_, err := stmt.Exec(username, email, passwd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+func Login(email, passwd string) bool {
+	db := getInstance()
+	stmt, _ := db.Prepare("select id from users where email = ? and passwd = ?")
+	defer stmt.Close()
+	rows, err := stmt.Query(email, passwd)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	if rows.Next() {
+		return true
+	}
+	return false
 }

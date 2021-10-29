@@ -9,6 +9,7 @@ import (
 	"idea_server/util"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -27,10 +28,11 @@ func main() {
 }
 
 func registerHandler(c *gin.Context) {
+	username := c.PostForm("username")
 	email := c.PostForm("email")
 	password := c.PostForm("password")
 	code := c.PostForm("code")
-	if email == "" || password == "" || code == "" || !util.IsEmail(email) {
+	if strings.TrimSpace(username) == "" || email == "" || password == "" || code == "" || !util.IsEmail(email) {
 		c.JSON(400, gin.H{
 			"error": "Bad request parameter",
 		})
@@ -44,7 +46,7 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	if !redisdb.IsAvailableEmailCode(email, code) {
+	if !redisdb.IsCorrectEmailCode(email, code) {
 		c.JSON(400, gin.H{
 			"error": "The verification code does not exist or has expired",
 		})
@@ -62,6 +64,15 @@ func registerHandler(c *gin.Context) {
 	if isExist {
 		c.JSON(400, gin.H{
 			"error": "Email already exists",
+		})
+		return
+	}
+
+	err = db.Register(username, email, password)
+	if err != nil {
+		log.Println(err)
+		c.JSON(500, gin.H{
+			"error": "Server internal error",
 		})
 		return
 	}
@@ -88,13 +99,13 @@ func emailCodeHandler(c *gin.Context) {
 	// 生成验证码
 	code := fmt.Sprintf("%06v", emailRand.Int31n(1000000))
 
-	err := util.SendMail(email, "Idea email verification code", "Your email verification code:"+code)
-	if err != nil {
-		c.JSON(422, gin.H{
-			"error": "Failed to send mail",
-		})
-		return
-	}
+	//err := util.SendMail(email, "Idea email verification code", "Your email verification code:"+code)
+	//if err != nil {
+	//	c.JSON(422, gin.H{
+	//		"error": "Failed to send mail",
+	//	})
+	//	return
+	//}
 	// 插入验证码到redis
 	redisdb.InsertEmailCode(email, code, c.ClientIP())
 	log.Println("code: ", code)
@@ -108,7 +119,7 @@ func emailCodeHandler(c *gin.Context) {
 //	//userid := claims[util.IdentityKey].(string)
 //
 //	t, _ := c.Get(util.IdentityKey)
-//	user := t.(*util.User)
+//	user := t.(*util.tokenUserInfo)
 //	c.JSON(200, gin.H{
 //		"email": user.Email,
 //	})

@@ -46,7 +46,7 @@ func InsertEmailCode(email, code, ip string) {
 	rdb.Set(ctx, ip, ip, codeForbidden)
 }
 
-func IsAvailableEmailCode(email, code string) bool {
+func IsCorrectEmailCode(email, code string) bool {
 	rdb := getInstance()
 	ctx := context.Background()
 	re, err := rdb.Get(ctx, email).Result()

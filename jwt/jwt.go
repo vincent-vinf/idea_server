@@ -1,31 +1,38 @@
-package util
+package jwt
 
 import (
 	"errors"
+	"idea_server/db"
+	"idea_server/redisdb"
+	"idea_server/util"
+	"log"
 	"time"
 
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
+// 登录所需的数据
 type login struct {
 	Email    string `form:"email" json:"email" binding:"required"`
-	Password string `form:"password" json:"password" binding:"required"`
+	Password string `form:"password" json:"password"`
+	Code     string `form:"code" json:"code"`
 }
 
-type User struct {
+// 结构体中的数据将会编码进token
+type tokenUserInfo struct {
 	Email string
 }
 
 const (
-	IdentityKey = "email"
-	appRealm    = "idea"
+	IdentityKey     = "email"
+	appRealm        = "idea"
 	tokenTimeout    = time.Hour * 1
 	tokenMaxRefresh = time.Hour * 2
 )
 
-func JwtInit() (*jwt.GinJWTMiddleware, error) {
-	cfg := LoadJWTCfg()
+func Init() (*jwt.GinJWTMiddleware, error) {
+	cfg := util.LoadJWTCfg()
 	// the jwt middleware
 	authMiddleware, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       appRealm,
@@ -34,7 +41,7 @@ func JwtInit() (*jwt.GinJWTMiddleware, error) {
 		MaxRefresh:  tokenMaxRefresh,
 		IdentityKey: IdentityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
-			if v, ok := data.(*User); ok {
+			if v, ok := data.(*tokenUserInfo); ok {
 				return jwt.MapClaims{
 					IdentityKey: v.Email,
 				}
@@ -43,7 +50,8 @@ func JwtInit() (*jwt.GinJWTMiddleware, error) {
 		},
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			return &User{
+			log.Println(claims[IdentityKey].(string))
+			return &tokenUserInfo{
 				Email: claims[IdentityKey].(string),
 			}
 		},
@@ -54,9 +62,15 @@ func JwtInit() (*jwt.GinJWTMiddleware, error) {
 			}
 			email := loginInfo.Email
 			password := loginInfo.Password
-			if email == "1" && password == "2" {
-				u := &User{
-					Email: "1223",
+			code := loginInfo.Code
+
+			if !util.IsEmail(email) {
+				return nil, jwt.ErrFailedAuthentication
+			}
+
+			if (code != "" && redisdb.IsCorrectEmailCode(email, code)) || (password != "" && db.Login(email, password)) {
+				u := &tokenUserInfo{
+					Email: email,
 				}
 				return u, nil
 			}
