@@ -1,3 +1,7 @@
+// @Title  user service
+// @Description  提供用户服务，包括登陆注册，获取用户信息，刷新token等
+// @Author  Vincent
+
 package main
 
 import (
