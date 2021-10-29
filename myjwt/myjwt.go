@@ -19,7 +19,7 @@ type login struct {
 	Code     string `form:"code" json:"code"`
 }
 
-// 结构体中的数据将会编码进token
+// TokenUserInfo 结构体中的数据将会编码进token
 type TokenUserInfo struct {
 	ID string
 }

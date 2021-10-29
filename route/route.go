@@ -4,21 +4,34 @@ import (
 	"github.com/gin-gonic/gin"
 	"idea_server/myjwt"
 	"log"
+
+	"github.com/unrolled/secure"
 )
 
 type Route struct {
 	router    *gin.Engine
 	authRoute *gin.RouterGroup
+	host      string
+	isTLS     bool
 }
 
-func (r *Route) Run(port string) {
-	log.Fatal(r.router.Run(port))
+func (r *Route) Run() {
+	if r.isTLS {
+		log.Println("use TLS")
+		log.Fatal(r.router.RunTLS(r.host, "./cert/idea.vinf.top.cer", "./cert/idea.vinf.top.key"))
+	} else {
+		log.Fatal(r.router.Run(r.host))
+	}
 }
 
-func New() *Route {
+func New(host string, isTLS bool) *Route {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+
+	if isTLS {
+		router.Use(TlsHandler(host))
+	}
 
 	router.NoRoute(func(c *gin.Context) {
 		c.JSON(404, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
@@ -41,6 +54,23 @@ func New() *Route {
 	return &Route{
 		router:    router,
 		authRoute: auth,
+		host:      host,
+		isTLS: isTLS,
+	}
+}
+
+func TlsHandler(host string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secureMiddleware := secure.New(secure.Options{
+			SSLRedirect: true,
+			SSLHost:     host,
+		})
+		err := secureMiddleware.Process(c.Writer, c.Request)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		c.Next()
 	}
 }
 

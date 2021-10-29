@@ -22,11 +22,11 @@ func main() {
 	db.Close()
 	redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
-	r := route.New()
+	r := route.New(":8000", false)
 	r.AddPostRoute("/register", registerHandler)
 	r.AddGetRoute("/email/code", emailCodeHandler)
 	r.AddAuthGetRoute("/userinfo", userinfoHandler)
-	r.Run(":8000")
+	r.Run()
 }
 
 func registerHandler(c *gin.Context) {
