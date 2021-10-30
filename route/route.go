@@ -82,10 +82,10 @@ func (r *Route) AddPostRoute(path string, handlers ...gin.HandlerFunc) {
 	r.router.POST(path, handlers...)
 }
 
-func (r *Route) AddAuthGetRoute(path string, handlers ...gin.HandlerFunc) {
+func (r *Route) AddGetAuthRoute(path string, handlers ...gin.HandlerFunc) {
 	r.authRoute.GET(path, handlers...)
 }
 
-func (r *Route) AddAuthPostRoute(path string, handlers ...gin.HandlerFunc) {
+func (r *Route) AddPostAuthRoute(path string, handlers ...gin.HandlerFunc) {
 	r.authRoute.POST(path, handlers...)
 }

@@ -23,13 +23,13 @@ var (
 )
 
 func main() {
-	db.Close()
-	redisdb.Close()
+	defer db.Close()
+	defer redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
 	r := route.New(":8000", false)
 	r.AddPostRoute("/register", registerHandler)
 	r.AddGetRoute("/email/code", emailCodeHandler)
-	r.AddAuthGetRoute("/userinfo", userinfoHandler)
+	r.AddGetAuthRoute("/userinfo", userinfoHandler)
 	r.Run()
 }
 
