@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/websocket"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -11,13 +12,17 @@ import (
 
 func main() {
 	//u := url.URL{Scheme: "wss", Host: "idea.vinf.top:8001", Path: "/connect"}
-	u := url.URL{Scheme: "ws", Host: "127.0.0.1:8001", Path: "/connect"}
+	u := url.URL{Scheme: "ws", Host: "127.0.0.1:8001", Path: "/auth/connect"}
 	log.Printf("connecting to %s", u.String())
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MzU1NzY3MDQsImlkIjoiMSIsIm9yaWdfaWF0IjoxNjM1NTczMTA0fQ.VcNv7g_mvpe2NEckJ-ci4INSlbpeY-BQn1ZZEIVkNfQ"
+	header := http.Header{}
+	header.Add("Authorization", "Bearer "+token)
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), header)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}

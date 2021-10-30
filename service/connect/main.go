@@ -40,8 +40,8 @@ func connectHandle(c *gin.Context) {
 func main() {
 	defer redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
-	r := route.New(":8001", true)
-	r.AddGetRoute("/connect", connectHandle)
+	r := route.New(":8001", false)
+	r.AddGetAuthRoute("/connect", connectHandle)
 	r.Run()
 
 }
