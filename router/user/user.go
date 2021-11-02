@@ -9,10 +9,11 @@ type UserRouter struct {
 
 }
 
-func (e UserRouter) InitUserBaseRouter(Router *gin.RouterGroup)  {
+func (e UserRouter) InitUserRouter(Router *gin.RouterGroup)  {
 	customerRouter := Router.Group("user")
-	var userBaseApi = v1.ApiGroupApp.UserApiGroup.UserApi
+	var userApi = v1.ApiGroupApp.UserApiGroup.UserApi
 	{
-		customerRouter.POST("test", userBaseApi.IsExistEmail)   // 邮箱是否存在
+		customerRouter.POST("get_my_info", userApi.GetMyInfo)
 	}
+
 }

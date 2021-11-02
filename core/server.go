@@ -13,6 +13,9 @@ type server interface {
 }
 
 func RunServer() {
+	// 初始化 redis 服务
+	initialize.Redis()
+
 	Router := initialize.Routers()
 
 	address := fmt.Sprintf(":%d", global.IDEA_CONFIG.System.Addr)

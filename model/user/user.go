@@ -1,10 +1,11 @@
 package user
 
+import "idea_server/global"
+
 // User 结构体
 type User struct {
 	// TODO recover
-	//global.GVA_MODEL
-	ID       uint   `gorm:"primarykey"`
+	global.IDEA_MODEL
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Passwd   string `json:"passwd"`

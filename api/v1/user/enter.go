@@ -4,6 +4,8 @@ import "idea_server/service"
 
 type ApiGroup struct {
 	UserApi
+	UserBaseApi
 }
 
-var userBaseService = service.ServiceGroupApp.UserServiceGroup.UserService
+var userService = service.ServiceGroupApp.UserServiceGroup.UserService
+var userBaseService = service.ServiceGroupApp.UserServiceGroup.UserBaseService

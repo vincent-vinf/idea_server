@@ -5,12 +5,12 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"idea_server/global"
-	"idea_server/utils"
+	"idea_server/utils/constant"
 )
 
 func Viper() *viper.Viper {
 	v := viper.New()
-	v.SetConfigFile(utils.ConfigFile)
+	v.SetConfigFile(constant.ConfigFile)
 	v.SetConfigType("ini")
 	err := v.ReadInConfig()
 	if err != nil {
