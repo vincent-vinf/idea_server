@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	//u := url.URL{Scheme: "wss", Host: "idea.vinf.top:8001", Path: "/connect"}
-	u := url.URL{Scheme: "ws", Host: "127.0.0.1:8001", Path: "/auth/connect"}
+	//u := url.URL{Scheme: "wss", Host: "idea.vinf.top:8001", Path: "/im"}
+	u := url.URL{Scheme: "ws", Host: "127.0.0.1:8001", Path: "/auth/im"}
 	log.Printf("connecting to %s", u.String())
 
 	interrupt := make(chan os.Signal, 1)

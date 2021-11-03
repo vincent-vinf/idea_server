@@ -1,5 +1,5 @@
-// @Title  connect cmd
-// @Description  连接层，保持连接，维持在线状态
+// @Title  im cmd
+// @Description  提供im服务
 // @Author  Vincent
 package main
 
@@ -41,7 +41,7 @@ func main() {
 	defer redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
 	r := route.New(":8001", false)
-	r.AddGetAuthRoute("/connect", connectHandle)
+	r.AddGetAuthRoute("/im", connectHandle)
 	r.Run()
 
 }

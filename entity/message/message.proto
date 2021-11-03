@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+message Cell{
+  uint64 Mid = 1;
+  uint64 Uid = 2;
+  uint32 Op = 3;
+  bytes Data = 4;
+}
