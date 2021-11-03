@@ -22,27 +22,30 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type Cell struct {
-	Id                   uint64   `protobuf:"varint,1,opt,name=Id,proto3" json:"Id,omitempty"`
-	Types                uint32   `protobuf:"varint,2,opt,name=Types,proto3" json:"Types,omitempty"`
-	Data                 []byte   `protobuf:"bytes,3,opt,name=Data,proto3" json:"Data,omitempty"`
+type Msg struct {
+	Mid                  uint64   `protobuf:"varint,1,opt,name=Mid,proto3" json:"Mid,omitempty"`
+	Uid                  int32    `protobuf:"varint,2,opt,name=Uid,proto3" json:"Uid,omitempty"`
+	IsGroup              bool     `protobuf:"varint,3,opt,name=isGroup,proto3" json:"isGroup,omitempty"`
+	Did                  int32    `protobuf:"varint,4,opt,name=Did,proto3" json:"Did,omitempty"`
+	Op                   int32    `protobuf:"varint,5,opt,name=Op,proto3" json:"Op,omitempty"`
+	Data                 []byte   `protobuf:"bytes,6,opt,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Cell) Reset()         { *m = Cell{} }
-func (m *Cell) String() string { return proto.CompactTextString(m) }
-func (*Cell) ProtoMessage()    {}
-func (*Cell) Descriptor() ([]byte, []int) {
+func (m *Msg) Reset()         { *m = Msg{} }
+func (m *Msg) String() string { return proto.CompactTextString(m) }
+func (*Msg) ProtoMessage()    {}
+func (*Msg) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{0}
 }
-func (m *Cell) XXX_Unmarshal(b []byte) error {
+func (m *Msg) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Cell) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Msg) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Cell.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Msg.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -52,33 +55,54 @@ func (m *Cell) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Cell) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Cell.Merge(m, src)
+func (m *Msg) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Msg.Merge(m, src)
 }
-func (m *Cell) XXX_Size() int {
+func (m *Msg) XXX_Size() int {
 	return m.Size()
 }
-func (m *Cell) XXX_DiscardUnknown() {
-	xxx_messageInfo_Cell.DiscardUnknown(m)
+func (m *Msg) XXX_DiscardUnknown() {
+	xxx_messageInfo_Msg.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Cell proto.InternalMessageInfo
+var xxx_messageInfo_Msg proto.InternalMessageInfo
 
-func (m *Cell) GetId() uint64 {
+func (m *Msg) GetMid() uint64 {
 	if m != nil {
-		return m.Id
+		return m.Mid
 	}
 	return 0
 }
 
-func (m *Cell) GetTypes() uint32 {
+func (m *Msg) GetUid() int32 {
 	if m != nil {
-		return m.Types
+		return m.Uid
 	}
 	return 0
 }
 
-func (m *Cell) GetData() []byte {
+func (m *Msg) GetIsGroup() bool {
+	if m != nil {
+		return m.IsGroup
+	}
+	return false
+}
+
+func (m *Msg) GetDid() int32 {
+	if m != nil {
+		return m.Did
+	}
+	return 0
+}
+
+func (m *Msg) GetOp() int32 {
+	if m != nil {
+		return m.Op
+	}
+	return 0
+}
+
+func (m *Msg) GetData() []byte {
 	if m != nil {
 		return m.Data
 	}
@@ -86,24 +110,27 @@ func (m *Cell) GetData() []byte {
 }
 
 func init() {
-	proto.RegisterType((*Cell)(nil), "Cell")
+	proto.RegisterType((*Msg)(nil), "message.Msg")
 }
 
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 122 bytes of a gzipped FileDescriptorProto
+	// 165 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcd, 0x4d, 0x2d, 0x2e,
-	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x57, 0x72, 0xe0, 0x62, 0x71, 0x4e, 0xcd,
-	0xc9, 0x11, 0xe2, 0xe3, 0x62, 0xf2, 0x4c, 0x91, 0x60, 0x54, 0x60, 0xd4, 0x60, 0x09, 0x62, 0xf2,
-	0x4c, 0x11, 0x12, 0xe1, 0x62, 0x0d, 0xa9, 0x2c, 0x48, 0x2d, 0x96, 0x60, 0x52, 0x60, 0xd4, 0xe0,
-	0x0d, 0x82, 0x70, 0x84, 0x84, 0xb8, 0x58, 0x5c, 0x12, 0x4b, 0x12, 0x25, 0x98, 0x15, 0x18, 0x35,
-	0x78, 0x82, 0xc0, 0x6c, 0x27, 0x81, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0,
-	0x48, 0x8e, 0x71, 0xc6, 0x63, 0x39, 0x86, 0x24, 0x36, 0xb0, 0xd1, 0xc6, 0x80, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x2f, 0x97, 0x6a, 0x7e, 0x6b, 0x00, 0x00, 0x00,
+	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x87, 0x72, 0x95, 0x2a, 0xb9,
+	0x98, 0x7d, 0x8b, 0xd3, 0x85, 0x04, 0xb8, 0x98, 0x7d, 0x33, 0x53, 0x24, 0x18, 0x15, 0x18, 0x35,
+	0x58, 0x82, 0x40, 0x4c, 0x90, 0x48, 0x68, 0x66, 0x8a, 0x04, 0x93, 0x02, 0xa3, 0x06, 0x6b, 0x10,
+	0x88, 0x29, 0x24, 0xc1, 0xc5, 0x9e, 0x59, 0xec, 0x5e, 0x94, 0x5f, 0x5a, 0x20, 0xc1, 0xac, 0xc0,
+	0xa8, 0xc1, 0x11, 0x04, 0xe3, 0x82, 0xd4, 0xba, 0x64, 0xa6, 0x48, 0xb0, 0x40, 0xd4, 0xba, 0x64,
+	0xa6, 0x08, 0xf1, 0x71, 0x31, 0xf9, 0x17, 0x48, 0xb0, 0x82, 0x05, 0x98, 0xfc, 0x0b, 0x84, 0x84,
+	0xb8, 0x58, 0x5c, 0x12, 0x4b, 0x12, 0x25, 0xd8, 0x14, 0x18, 0x35, 0x78, 0x82, 0xc0, 0x6c, 0x27,
+	0x81, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0x71, 0xc6, 0x63,
+	0x39, 0x86, 0x24, 0x36, 0xb0, 0xe3, 0x8c, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0x8d, 0x33, 0x16,
+	0xe2, 0xad, 0x00, 0x00, 0x00,
 }
 
-func (m *Cell) Marshal() (dAtA []byte, err error) {
+func (m *Msg) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -113,12 +140,12 @@ func (m *Cell) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Cell) MarshalTo(dAtA []byte) (int, error) {
+func (m *Msg) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Cell) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Msg) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -132,15 +159,35 @@ func (m *Cell) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Data)
 		i = encodeVarintMessage(dAtA, i, uint64(len(m.Data)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x32
 	}
-	if m.Types != 0 {
-		i = encodeVarintMessage(dAtA, i, uint64(m.Types))
+	if m.Op != 0 {
+		i = encodeVarintMessage(dAtA, i, uint64(m.Op))
+		i--
+		dAtA[i] = 0x28
+	}
+	if m.Did != 0 {
+		i = encodeVarintMessage(dAtA, i, uint64(m.Did))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.IsGroup {
+		i--
+		if m.IsGroup {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Uid != 0 {
+		i = encodeVarintMessage(dAtA, i, uint64(m.Uid))
 		i--
 		dAtA[i] = 0x10
 	}
-	if m.Id != 0 {
-		i = encodeVarintMessage(dAtA, i, uint64(m.Id))
+	if m.Mid != 0 {
+		i = encodeVarintMessage(dAtA, i, uint64(m.Mid))
 		i--
 		dAtA[i] = 0x8
 	}
@@ -158,17 +205,26 @@ func encodeVarintMessage(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *Cell) Size() (n int) {
+func (m *Msg) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Id != 0 {
-		n += 1 + sovMessage(uint64(m.Id))
+	if m.Mid != 0 {
+		n += 1 + sovMessage(uint64(m.Mid))
 	}
-	if m.Types != 0 {
-		n += 1 + sovMessage(uint64(m.Types))
+	if m.Uid != 0 {
+		n += 1 + sovMessage(uint64(m.Uid))
+	}
+	if m.IsGroup {
+		n += 2
+	}
+	if m.Did != 0 {
+		n += 1 + sovMessage(uint64(m.Did))
+	}
+	if m.Op != 0 {
+		n += 1 + sovMessage(uint64(m.Op))
 	}
 	l = len(m.Data)
 	if l > 0 {
@@ -186,7 +242,7 @@ func sovMessage(x uint64) (n int) {
 func sozMessage(x uint64) (n int) {
 	return sovMessage(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *Cell) Unmarshal(dAtA []byte) error {
+func (m *Msg) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -209,17 +265,17 @@ func (m *Cell) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Cell: wiretype end group for non-group")
+			return fmt.Errorf("proto: Msg: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Cell: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Msg: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Mid", wireType)
 			}
-			m.Id = 0
+			m.Mid = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMessage
@@ -229,16 +285,16 @@ func (m *Cell) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Id |= uint64(b&0x7F) << shift
+				m.Mid |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 2:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Types", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Uid", wireType)
 			}
-			m.Types = 0
+			m.Uid = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMessage
@@ -248,12 +304,70 @@ func (m *Cell) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Types |= uint32(b&0x7F) << shift
+				m.Uid |= int32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsGroup", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsGroup = bool(v != 0)
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Did", wireType)
+			}
+			m.Did = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Did |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Op", wireType)
+			}
+			m.Op = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Op |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
 			}

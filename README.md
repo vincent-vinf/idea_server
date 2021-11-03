@@ -7,5 +7,5 @@
 ### mark
 
 ```bash
-protoc --gofast_out=. myproto.proto
+protoc --gofast_out=. *.proto
 ```

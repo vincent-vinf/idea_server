@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package message;
+
+message Msg{
+  uint64 Mid = 1; // message id
+  int32 Uid = 2; // user id
+  bool isGroup = 3; // group message ?
+  int32 Did = 4; // distance id (user/group)
+  int32 Op = 5; // operate
+  bytes Data = 6; // []byte may be empty
+}

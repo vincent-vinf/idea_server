@@ -6,12 +6,17 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"idea_server/db/redisdb"
+	"idea_server/internal/im"
 	"idea_server/route"
 	"log"
+	"net/http"
 )
 
-var upgrader = websocket.Upgrader{}
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func connectHandle(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -19,29 +24,13 @@ func connectHandle(c *gin.Context) {
 		log.Println(err)
 		return
 	}
-	defer conn.Close()
-	for {
-		//读取ws中的数据
-		mt, message, err := conn.ReadMessage()
-		if err != nil {
-			break
-		}
-		if string(message) == "ping" {
-			message = []byte("pong")
-		}
-		//写入ws数据
-		err = conn.WriteMessage(mt, message)
-		if err != nil {
-			break
-		}
-	}
+	node := im.NewNode(conn)
+
 }
 
 func main() {
-	defer redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
 	r := route.New(":8001", false)
 	r.AddGetAuthRoute("/im", connectHandle)
 	r.Run()
-
 }

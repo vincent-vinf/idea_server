@@ -100,3 +100,4 @@ func GetID(email string) (string, error) {
 	}
 	return "", errors.New("does not exist")
 }
+
