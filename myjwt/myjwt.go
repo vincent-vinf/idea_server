@@ -2,8 +2,8 @@ package myjwt
 
 import (
 	"errors"
-	"idea_server/db"
-	"idea_server/redisdb"
+	"idea_server/db/mysql"
+	"idea_server/db/redisdb"
 	"idea_server/util"
 	"log"
 	"time"
@@ -67,8 +67,8 @@ func Init() (*jwt.GinJWTMiddleware, error) {
 				return nil, jwt.ErrFailedAuthentication
 			}
 
-			if (code != "" && redisdb.IsCorrectEmailCode(email, code)) || (password != "" && db.Login(email, password)) {
-				id, err := db.GetID(email)
+			if (code != "" && redisdb.IsCorrectEmailCode(email, code)) || (password != "" && mysql.Login(email, password)) {
+				id, err := mysql.GetID(email)
 				if err != nil {
 					log.Println(err)
 					return nil, jwt.ErrFailedAuthentication

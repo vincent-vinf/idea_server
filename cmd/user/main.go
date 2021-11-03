@@ -1,4 +1,4 @@
-// @Title  user service
+// @Title  user cmd
 // @Description  提供用户服务，包括登陆注册，获取用户信息，刷新token等
 // @Author  Vincent
 
@@ -7,9 +7,9 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"idea_server/db"
+	"idea_server/db/mysql"
+	"idea_server/db/redisdb"
 	"idea_server/myjwt"
-	"idea_server/redisdb"
 	"idea_server/route"
 	"idea_server/util"
 	"log"
@@ -23,13 +23,14 @@ var (
 )
 
 func main() {
-	defer db.Close()
+	defer mysql.Close()
 	defer redisdb.Close()
 	//gin.SetMode(gin.ReleaseMode)
 	r := route.New(":8000", false)
 	r.AddPostRoute("/register", registerHandler)
 	r.AddGetRoute("/email/code", emailCodeHandler)
 	r.AddGetAuthRoute("/userinfo", userinfoHandler)
+
 	r.Run()
 }
 
@@ -59,7 +60,7 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	isExist, err := db.IsExistEmail(email)
+	isExist, err := mysql.IsExistEmail(email)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -74,7 +75,7 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	err = db.Register(username, email, password)
+	err = mysql.Register(username, email, password)
 	if err != nil {
 		log.Println(err)
 		c.JSON(500, gin.H{
@@ -105,13 +106,13 @@ func emailCodeHandler(c *gin.Context) {
 	// 生成验证码
 	code := fmt.Sprintf("%06v", emailRand.Int31n(1000000))
 
-	//err := util.SendMail(email, "Idea email verification code", "Your email verification code:"+code)
-	//if err != nil {
-	//	c.JSON(422, gin.H{
-	//		"error": "Failed to send mail",
-	//	})
-	//	return
-	//}
+	err := util.SendMail(email, "Idea email verification code", "Your email verification code:"+code)
+	if err != nil {
+		c.JSON(422, gin.H{
+			"error": "Failed to send mail",
+		})
+		return
+	}
 	// 插入验证码到redis
 	redisdb.InsertEmailCode(email, code, c.ClientIP())
 	log.Println("code: ", code)

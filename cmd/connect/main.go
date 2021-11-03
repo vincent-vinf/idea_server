@@ -1,4 +1,4 @@
-// @Title  connect service
+// @Title  connect cmd
 // @Description  连接层，保持连接，维持在线状态
 // @Author  Vincent
 package main
@@ -6,7 +6,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"idea_server/redisdb"
+	"idea_server/db/redisdb"
 	"idea_server/route"
 	"log"
 )
