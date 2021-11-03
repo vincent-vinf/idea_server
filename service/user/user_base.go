@@ -10,6 +10,7 @@ import (
 	"idea_server/global"
 	"idea_server/model/user"
 	"idea_server/model/user/request"
+	"idea_server/utils"
 	"math/rand"
 	"strconv"
 	"time"
@@ -59,17 +60,26 @@ func (u *UserBaseService) Register(regInfo request.Register) (bool, error) {
 	return true, nil
 }
 
-func (u *UserBaseService) GetEmailCode(email, ip string) (err error) {
+func (u *UserBaseService) GetEmailCode(email, ip string) (code string, err error) {
 	if !u.IsAllowedIP(ip) {
-		return errors.New("请求太频繁")
+		return "", errors.New("请求太频繁")
 	}
-	// TODO 发送邮箱
 	// 生成验证码
-	code := fmt.Sprintf("%06v", emailRand.Int31n(1000000))
+	code = fmt.Sprintf("%06v", emailRand.Int31n(1000000))
+
+	// 发送邮箱
+	emails := make([]string, 0, 1)
+	emails = append(emails, email)
+	err = utils.SendMail("idea 邮箱验证码", "你的邮箱验证码："+code, emails)
+	if err != nil {
+		global.IDEA_LOG.Error("邮箱发送失败", zap.Error(err))
+		return "", errors.New("邮箱发送失败")
+	}
+
 	ctx := context.Background()
 	global.IDEA_REDIS.Set(ctx, email, code, codeExpiration)
 	global.IDEA_REDIS.Set(ctx, ip, ip, codeForbidden)
-	return nil
+	return code, nil
 }
 
 func (u *UserBaseService) GetID(email string) string {
