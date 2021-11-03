@@ -45,7 +45,7 @@ func Routers() *gin.Engine {
 
 	// 需鉴权
 	PrivateGroup := Router.Group("")
-	PrivateGroup.Use(authMiddleware.MiddlewareFunc())
+	PrivateGroup.Use(authMiddleware.MiddlewareFunc()).Use(middleware.LimitLogin())
 	{
 		userRouter.InitUserRouter(PrivateGroup)
 	}

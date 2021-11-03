@@ -4,7 +4,6 @@ import "idea_server/global"
 
 // User 结构体
 type User struct {
-	// TODO recover
 	global.IDEA_MODEL
 	Username string `json:"username"`
 	Email    string `json:"email"`

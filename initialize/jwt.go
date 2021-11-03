@@ -4,11 +4,15 @@ import (
 	"errors"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"idea_server/global"
+	"idea_server/model/user"
 	"idea_server/model/user/request"
+	"idea_server/model/user/response"
 	"idea_server/service"
 	"idea_server/utils"
 	"idea_server/utils/constant"
+	"strconv"
 	"time"
 )
 
@@ -34,11 +38,17 @@ func JWTAuth() (*jwt.GinJWTMiddleware, error) {
 			}
 			return jwt.MapClaims{}
 		},
+		// 获取个人信息
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			return &TokenUserInfo{
-				ID: claims[constant.IdentityKey].(string),
+			userInfo := &response.UserResponse{}
+			id, err := strconv.Atoi(claims[constant.IdentityKey].(string))
+			if err != nil {
+				global.IDEA_LOG.Error("IdentityHandler 错误", zap.Error(err))
+				return nil
 			}
+			global.IDEA_DB.Model(&user.User{}).Where("id = ?", id).Find(userInfo)
+			return userInfo
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
 			var loginInfo request.Login
