@@ -27,8 +27,8 @@ type TokenUserInfo struct {
 const (
 	IdentityKey     = "id"
 	appRealm        = "idea"
-	tokenTimeout    = time.Hour * 1
-	tokenMaxRefresh = time.Hour * 2
+	tokenTimeout    = time.Hour * 2400
+	tokenMaxRefresh = time.Hour * 24
 )
 
 func Init() (*jwt.GinJWTMiddleware, error) {

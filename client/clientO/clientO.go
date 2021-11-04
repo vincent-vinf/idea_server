@@ -20,7 +20,7 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDQ2NDEwOTAsImlkIjoiMSIsIm9yaWdfaWF0IjoxNjM2MDAxMDkwfQ.UXY0VzBpFMhLU9M-2Rt5KpAVB6_eb3kLyG1jLMh3ZEk"
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDQ2NTA0NTYsImlkIjoiMiIsIm9yaWdfaWF0IjoxNjM2MDEwNDU2fQ.DxOhmPeelBqOKpwk9JY1u8JdduUZYk2oR8qbrVuz3jk"
 	header := http.Header{}
 	header.Add("Authorization", "Bearer "+token)
 
@@ -49,32 +49,32 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	//ticker := time.NewTicker(time.Second)
+	//defer ticker.Stop()
 
 	for {
 		select {
 		case <-done:
 			return
-		case <-ticker.C:
-			msg := &message.Msg{
-				Mid:     0,
-				Uid:     1,
-				IsGroup: false,
-				Did:     2,
-				Op:      message.SendMsg,
-				Data:    nil,
-			}
-			bytes, err := msg.Marshal()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			err = c.WriteMessage(websocket.BinaryMessage, bytes)
-			if err != nil {
-				log.Println("write:", err)
-				return
-			}
+		//case <-ticker.C:
+		//	msg := &message.Msg{
+		//		Mid:     0,
+		//		Uid:     2,
+		//		IsGroup: false,
+		//		Did:     2,
+		//		Op:      message.SendMsg,
+		//		Data:    nil,
+		//	}
+		//	bytes, err := msg.Marshal()
+		//	if err != nil {
+		//		log.Println(err)
+		//		return
+		//	}
+		//	err = c.WriteMessage(websocket.BinaryMessage, bytes)
+		//	if err != nil {
+		//		log.Println("write:", err)
+		//		return
+		//	}
 		case <-interrupt:
 			log.Println("interrupt")
 

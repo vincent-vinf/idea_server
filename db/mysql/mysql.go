@@ -101,3 +101,26 @@ func GetID(email string) (string, error) {
 	return "", errors.New("does not exist")
 }
 
+// AllUserGroup Return to the group chat where the user is
+// return nil on error
+func AllUserGroup(id string) []string {
+	db := getInstance()
+	stmt, _ := db.Prepare("select gid from member where uid = ?")
+	defer stmt.Close()
+	rows, err := stmt.Query(id)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	defer rows.Close()
+	ans := make([]string, 0)
+	for rows.Next() {
+		var str string
+		err := rows.Scan(&str)
+		if err != nil {
+			return nil
+		}
+		ans = append(ans, str)
+	}
+	return ans
+}
