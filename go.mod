@@ -7,8 +7,10 @@ require (
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/satori/go.uuid v1.2.0
+	github.com/streadway/amqp v1.0.0
 	github.com/unrolled/secure v1.0.9
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.63.2
@@ -22,7 +24,6 @@ require (
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.1.0 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect

@@ -1,6 +1,9 @@
 package im
 
-import "sync"
+import (
+	"idea_server/protolcol/message"
+	"sync"
+)
 
 type Group struct {
 	gid    string
@@ -42,5 +45,14 @@ func (g *Group) Del(node *Node) {
 			node.Next = nil
 		}
 		node.Pre = nil
+	}
+}
+
+func (g *Group) SendMsg(msg *message.Msg) {
+	for h := g.head; h != nil; h = h.Next {
+		// Don't forward to source
+		if h.Id != int2str(msg.Uid) {
+			h.Ch <- msg
+		}
 	}
 }

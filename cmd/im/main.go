@@ -6,6 +6,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"idea_server/db/mysql"
 	"idea_server/internal/im"
 	"idea_server/myjwt"
 	"idea_server/route"
@@ -20,7 +21,7 @@ var upgrader = websocket.Upgrader{
 }
 
 var (
-	bucket = im.NewBucket()
+	serve = im.NewServe()
 )
 
 func connectHandle(c *gin.Context) {
@@ -32,17 +33,19 @@ func connectHandle(c *gin.Context) {
 	t, _ := c.Get(myjwt.IdentityKey)
 	user := t.(*myjwt.TokenUserInfo)
 	id := user.ID
-	node := im.NewNode(id, conn, bucket)
+	node := im.NewNode(id, conn)
 
 	log.Printf("id:%s ws connect", id)
 
-	bucket.Put(node)
+	serve.Bucket(id).Put(node)
 
 	go node.Send()
 	go node.Receive()
 }
 
 func main() {
+	mysql.Close()
+	go serve.Run()
 	//gin.SetMode(gin.ReleaseMode)
 	r := route.New(":8001", false)
 	r.AddGetAuthRoute("/ws", connectHandle)

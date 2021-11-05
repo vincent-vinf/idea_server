@@ -1,8 +1,8 @@
 package im
 
 import (
-	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/websocket"
+	"idea_server/mq"
 	"idea_server/protolcol/message"
 	"log"
 	"strconv"
@@ -24,14 +24,13 @@ type Node struct {
 	Next *Node
 }
 
-func NewNode(id string, conn *websocket.Conn, bucket *Bucket) *Node {
+func NewNode(id string, conn *websocket.Conn) *Node {
 	return &Node{
-		Id:     id,
-		conn:   conn,
-		Ch:     make(chan *message.Msg, channelSize),
-		bucket: bucket,
-		Pre:    nil,
-		Next:   nil,
+		Id:   id,
+		conn: conn,
+		Ch:   make(chan *message.Msg, channelSize),
+		Pre:  nil,
+		Next: nil,
 	}
 }
 
@@ -62,21 +61,10 @@ func (n *Node) Receive() {
 			log.Println(err)
 			return
 		}
-		msg := &message.Msg{}
-		err = proto.Unmarshal(bytes, msg)
+		err = mq.GetInstance().Product(bytes)
 		if err != nil {
 			log.Println(err)
-			continue
-		}
-
-		if int2str(msg.Uid) != n.Id {
-			log.Println("id?")
-			continue
-		}
-
-		switch msg.Op {
-		case message.SendMsg:
-			dispatch(msg, n.bucket)
+			return
 		}
 	}
 }
@@ -84,19 +72,6 @@ func (n *Node) Receive() {
 func (n *Node) Close() {
 	if n.conn != nil {
 		n.conn.Close()
-	}
-}
-
-func dispatch(msg *message.Msg, bucket *Bucket) {
-	if msg.IsGroup {
-
-	} else {
-		log.Println(int2str(msg.Did))
-		log.Println(msg)
-		node := bucket.Node(strconv.FormatInt(int64(msg.Did), 10))
-		if node != nil {
-			node.Ch <- msg
-		}
 	}
 }
 

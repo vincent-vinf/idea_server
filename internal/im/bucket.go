@@ -39,9 +39,23 @@ func (b *Bucket) Put(node *Node) {
 	b.lock.Unlock()
 }
 
+func (b *Bucket) Del(uid string) {
+	b.lock.Lock()
+	delete(b.nodeMap, uid)
+
+	b.lock.Unlock()
+
+}
+
 func (b *Bucket) Node(uid string) (node *Node) {
 	b.lock.RLock()
 	node = b.nodeMap[uid]
 	b.lock.RUnlock()
 	return
+}
+func (b *Bucket) Group(gid string) (group *Group) {
+	b.lock.RLock()
+	group = b.groupsMap[gid]
+	b.lock.RUnlock()
+	return group
 }

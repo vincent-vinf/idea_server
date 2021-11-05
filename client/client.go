@@ -60,8 +60,8 @@ func main() {
 			msg := &message.Msg{
 				Mid:     0,
 				Uid:     1,
-				IsGroup: false,
-				Did:     2,
+				IsGroup: true,
+				Did:     1,
 				Op:      message.SendMsg,
 				Data:    nil,
 			}

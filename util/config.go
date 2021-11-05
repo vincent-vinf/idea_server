@@ -2,6 +2,7 @@ package util
 
 import (
 	"gopkg.in/ini.v1"
+	"log"
 	"strconv"
 	"sync"
 )
@@ -27,6 +28,10 @@ type RedisConfig struct {
 	DB      int
 }
 
+type MqConfig struct {
+	Url string
+}
+
 var (
 	emailCfg  *EmailConfig
 	emailOnce sync.Once
@@ -39,6 +44,9 @@ var (
 
 	redisCfg  *RedisConfig
 	redisOnce sync.Once
+
+	mqCfg  *MqConfig
+	mqOnce sync.Once
 
 	cfg        *ini.File
 	configOnce sync.Once
@@ -131,4 +139,45 @@ func LoadRedisCfg() *RedisConfig {
 		})
 	}
 	return redisCfg
+}
+
+func LoadMqCfg() *MqConfig {
+	if mqCfg == nil {
+		loadConfig()
+		mqOnce.Do(func() {
+			section, err := cfg.GetSection("mq")
+			user, err := section.GetKey("user")
+			handleErr(err)
+			mqUser := user.Value()
+
+			pass, err := section.GetKey("password")
+			handleErr(err)
+			mqPass := pass.Value()
+
+			hostKey, err := section.GetKey("host")
+			handleErr(err)
+			host := hostKey.Value()
+
+			portKey, err := section.GetKey("port")
+			handleErr(err)
+			port := portKey.Value()
+
+			routeKey, err := section.GetKey("route")
+			handleErr(err)
+			route := routeKey.Value()
+			if err != nil {
+				panic(err)
+			}
+			mqCfg = &MqConfig{
+				Url: "amqp://" + mqUser + ":" + mqPass + "@" + host + ":" + port + route,
+			}
+		})
+	}
+	return mqCfg
+}
+
+func handleErr(err error) {
+	if err != nil {
+		log.Fatal("load config error: ", err)
+	}
 }
