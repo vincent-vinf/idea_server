@@ -20,6 +20,17 @@ func TestManager_Consume(t *testing.T) {
 		time.Sleep(time.Second)
 	})
 
+	m2 := &Manager{}
+	err = m2.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	go m2.Consume(ctx, func(bytes []byte) {
+		log.Println("2:", string(bytes))
+		time.Sleep(time.Second)
+	})
+
 	for i := 0; i < 10; i++ {
 		m.Product([]byte(strconv.FormatInt(int64(i), 10)))
 	}
