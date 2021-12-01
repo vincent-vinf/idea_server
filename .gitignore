@@ -17,3 +17,7 @@ config.ini
 cert/
 
 log/
+
+idea.log
+
+config.ini.back
