@@ -1,12 +1,17 @@
 package user
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"idea_server/global"
 	"idea_server/model/common/response"
 	"idea_server/model/user/request"
 	"idea_server/utils"
+	"io/ioutil"
+	"net/http"
+	"strconv"
 )
 
 type UserBaseApi struct {
@@ -21,7 +26,12 @@ func (u *UserBaseApi) Register(c *gin.Context) {
 	}
 	ok, err := userBaseService.Register(msg)
 	if ok {
-		response.OkWithMessage("注册成功", c)
+		loginData := "{\"email\": \"" + msg.Email + "\", \"passwd\": \"" + msg.Passwd + "\"}"
+		res, _ := http.Post("http://127.0.0.1:"+strconv.Itoa(global.IDEA_CONFIG.System.Addr)+"/login", "application/json", bytes.NewBuffer([]byte(loginData)))
+		data, _ := ioutil.ReadAll(res.Body)
+		m := make(map[string]interface{})
+		_ = json.Unmarshal(data, &m)
+		response.OkWithData(m, c)
 	} else {
 		global.IDEA_LOG.Error("注册失败", zap.Error(err))
 		response.FailWithMessage("注册失败："+err.Error(), c)
