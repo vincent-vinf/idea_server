@@ -30,7 +30,9 @@ func (u *UserBaseApi) Register(c *gin.Context) {
 
 // GetEmailCode 生成邮箱验证码
 func (u *UserBaseApi) GetEmailCode(c *gin.Context) {
-	if code, err := userBaseService.GetEmailCode(c.PostForm("email"), c.ClientIP()); err != nil {
+	rawJson := make(map[string]interface{})
+	_ = c.ShouldBindJSON(&rawJson)
+	if code, err := userBaseService.GetEmailCode(rawJson["email"].(string), c.ClientIP()); err != nil {
 		global.IDEA_LOG.Error("生成邮箱验证码失败", zap.Error(err))
 		response.FailWithMessage("生成邮箱验证码失败："+err.Error(), c)
 	} else {

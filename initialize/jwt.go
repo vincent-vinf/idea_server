@@ -52,7 +52,7 @@ func JWTAuth() (*jwt.GinJWTMiddleware, error) {
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {
 			var loginInfo request.Login
-			if err := c.ShouldBind(&loginInfo); err != nil {
+			if err := c.ShouldBindJSON(&loginInfo); err != nil {
 				return "", jwt.ErrMissingLoginValues
 			}
 			email := loginInfo.Email
