@@ -10,5 +10,5 @@ type Register struct {
 	Username string `json:"username" form:"username"`
 	Email    string `json:"email" form:"email"`
 	Passwd   string `json:"passwd" form:"passwd"`
-	Code     string `json:"code" form:"code"`
+	//Code     string `json:"code" form:"code"`
 }

@@ -47,9 +47,9 @@ func (u *UserBaseService) Register(regInfo request.Register) (bool, error) {
 		}
 	}
 
-	if !u.IsCorrectEmailCode(regInfo.Email, regInfo.Code) {
-		return false, errors.New("验证码不存在或者已过期")
-	}
+	//if !u.IsCorrectEmailCode(regInfo.Email, regInfo.Code) {
+	//	return false, errors.New("验证码不存在或者已过期")
+	//}
 
 	// 新建用户
 	err := global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd}).Error
