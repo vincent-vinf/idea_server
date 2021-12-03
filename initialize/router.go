@@ -19,6 +19,7 @@ func Routers() *gin.Engine {
 	Router.Use(middleware.Cors())
 	// 获取路由组实例
 	userRouter := router.RouterGroupApp.User
+	ideaRouter := router.RouterGroupApp.Idea
 
 	// 无需鉴权
 	PublicGroup := Router.Group("")
@@ -48,6 +49,7 @@ func Routers() *gin.Engine {
 	PrivateGroup.Use(authMiddleware.MiddlewareFunc()).Use(middleware.LimitLogin())
 	{
 		userRouter.InitUserRouter(PrivateGroup)
+		ideaRouter.InitIdeaRouter(PrivateGroup)
 	}
 	// TODO install plugin see gva
 

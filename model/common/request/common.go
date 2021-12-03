@@ -11,13 +11,13 @@ type GetById struct {
 	ID float64 `json:"id" form:"id"` // 主键ID
 }
 
+func (r *GetById) Uint() uint {
+	return uint(r.ID)
+}
+
 type IdsReq struct {
 	Ids []int `json:"ids" form:"ids"`
 }
 
-// Get role by id structure
-type GetAuthorityId struct {
-	AuthorityId string `json:"authorityId" form:"authorityId"` // 角色ID
-}
-
+// 为了写 swagger 文档用
 type Empty struct{}
