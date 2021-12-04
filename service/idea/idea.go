@@ -110,23 +110,19 @@ func (e *IdeaService) SimpleContent(content string) string {
 			content = r.ReplaceAllString(content, value.repl)
 		}
 	}
-	r := []rune(content)
-	if len(r) > 50 {
-		return string(r[:50])
-	}
-	return string(r)
+	return content
 }
 
 func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	// TODO life
 
 	simple := e.SimpleContent(content)
-	//fmt.Println("simple", simple)
+	fmt.Println("simple", simple)
 	idea := idea.Idea{
-		UserId: userId,
-		Simple:     simple,
-		Content:    content,
-		Life:       0,
+		UserId:  userId,
+		Simple:  simple,
+		Content: content,
+		Life:    0,
 	}
 
 	result := global.IDEA_DB.Create(&idea)
@@ -143,4 +139,56 @@ func (e *IdeaService) GetIdeaInfo(info *request.GetById) (interface{}, error) {
 		return nil, result.Error
 	}
 	return i, nil
+}
+
+func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool) (err error, list interface{}, total int64) {
+	limit := pageInfo.PageSize
+	offset := pageInfo.PageSize * (pageInfo.Page - 1)
+	db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
+	var ideaList []idea.Idea
+
+	// 添加一些条件
+	//if ideaInfo.Content != "" {
+	//	db = db.Where("content LIKE ?", "%"+ideaInfo.Content+"%")
+	//}
+
+	err = db.Count(&total).Error
+
+	if err != nil {
+		return err, ideaList, total
+	} else {
+		db = db.Limit(limit).Offset(offset)
+		if order != "" {
+			var OrderStr string
+			// 设置有效排序key 防止sql注入
+			// 感谢 Tom4t0 提交漏洞信息
+			orderMap := make(map[string]bool, 5)
+			orderMap["life"] = true
+			orderMap["created_at"] = true
+			orderMap["updated_at"] = true
+			if orderMap[order] {
+				if desc {
+					OrderStr = order + " desc"
+				} else {
+					OrderStr = order
+				}
+			}
+
+			err = db.Order(OrderStr).Error
+		}
+		if err == nil {
+			err = db.Order("created_at").Find(&ideaList).Error
+		}
+	}
+	for index := range ideaList {
+		r := []rune(ideaList[index].Simple)
+		if len(r) > 40 {
+			ideaList[index].Simple = string(r[:40])
+		} else {
+			ideaList[index].Simple = string(r)
+		}
+		// 减少传输字节
+		//ideaList[index].Content = ""
+	}
+	return err, ideaList, total
 }

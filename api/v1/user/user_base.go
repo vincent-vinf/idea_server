@@ -34,7 +34,7 @@ func (u *UserBaseApi) Register(c *gin.Context) {
 		response.OkWithData(m, c)
 	} else {
 		global.IDEA_LOG.Error("注册失败", zap.Error(err))
-		response.FailWithMessage("注册失败："+err.Error(), c)
+		response.FailWithMessage("注册失败", c)
 	}
 }
 
@@ -44,7 +44,7 @@ func (u *UserBaseApi) GetEmailCode(c *gin.Context) {
 	_ = c.ShouldBindJSON(&rawJson)
 	if code, err := userBaseService.GetEmailCode(rawJson["email"].(string), c.ClientIP()); err != nil {
 		global.IDEA_LOG.Error("生成邮箱验证码失败", zap.Error(err))
-		response.FailWithMessage("生成邮箱验证码失败："+err.Error(), c)
+		response.FailWithMessage("生成邮箱验证码失败", c)
 	} else {
 		response.OkWithData(gin.H{"email_code": code}, c)
 	}
