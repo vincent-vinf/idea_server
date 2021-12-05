@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"idea_server/global"
 	"idea_server/model/common/request"
+	"idea_server/model/common/response"
 	"idea_server/model/idea"
+	ideaRes "idea_server/model/idea/response"
 	"regexp"
 )
+
+var ideaCommentService = new(IdeaCommentService)
 
 type mdRegexp struct {
 	expr string
@@ -133,19 +137,36 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 }
 
 func (e *IdeaService) GetIdeaInfo(info *request.GetById) (interface{}, error) {
+	err, list, total, num := ideaCommentService.GetCommentList(idea.IdeaComment{IdeaId: info.Uint()}, request.PageInfo{
+		Page:     1,
+		PageSize: 10,
+	}, "", false)
+	if err != nil {
+		return nil, err
+	}
+
 	i := idea.Idea{}
 	result := global.IDEA_DB.First(&i, info.Uint())
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return i, nil
+	return &ideaRes.IdeaInfoResponse{
+		Idea: i,
+		Comments: response.PageResult{
+			List:     list,
+			Total:    total,
+			Num:      num,
+			Page:     1,
+			PageSize: 10,
+		},
+	}, nil
 }
 
-func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool) (err error, list interface{}, total int64) {
+func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool) (err error, list interface{}, total int64, num int) {
 	limit := pageInfo.PageSize
 	offset := pageInfo.PageSize * (pageInfo.Page - 1)
 	db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
-	var ideaList []idea.Idea
+	ideaList := make([]ideaRes.IdeaListResponse, 0, 1)
 
 	// 添加一些条件
 	//if ideaInfo.Content != "" {
@@ -155,16 +176,15 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	err = db.Count(&total).Error
 
 	if err != nil {
-		return err, ideaList, total
+		return err, ideaList, total, len(ideaList)
 	} else {
 		db = db.Limit(limit).Offset(offset)
 		if order != "" {
 			var OrderStr string
 			// 设置有效排序key 防止sql注入
 			// 感谢 Tom4t0 提交漏洞信息
-			orderMap := make(map[string]bool, 5)
+			orderMap := make(map[string]bool, 2)
 			orderMap["life"] = true
-			orderMap["created_at"] = true
 			orderMap["updated_at"] = true
 			if orderMap[order] {
 				if desc {
@@ -174,10 +194,11 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 				}
 			}
 
-			err = db.Order(OrderStr).Error
+			db = db.Order(OrderStr)
+			err = db.Error
 		}
 		if err == nil {
-			err = db.Order("created_at").Find(&ideaList).Error
+			err = db.Order("created_at desc").Find(&ideaList).Error
 		}
 	}
 	for index := range ideaList {
@@ -189,6 +210,8 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 		}
 		// 减少传输字节
 		//ideaList[index].Content = ""
+		// TODO IsLike
+		ideaList[index].IsLike = false
 	}
-	return err, ideaList, total
+	return err, ideaList, total, len(ideaList)
 }

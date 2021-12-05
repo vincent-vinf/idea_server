@@ -7,9 +7,7 @@ import (
 	"idea_server/model/common/request"
 	"idea_server/model/common/response"
 	ideaReq "idea_server/model/idea/request"
-	userRes "idea_server/model/user/response"
 	"idea_server/utils"
-	"idea_server/utils/constant"
 )
 
 type IdeaApi struct {
@@ -18,8 +16,7 @@ type IdeaApi struct {
 func (e *IdeaApi) CreateIdea(c *gin.Context) {
 	rawJson := make(map[string]interface{})
 	_ = c.ShouldBindJSON(&rawJson)
-	userInfo, _ := c.Get(constant.IdentityKey)
-	ok, err := ideaService.CreateIdea(userInfo.(*userRes.UserResponse).ID, rawJson["content"].(string))
+	ok, err := ideaService.CreateIdea(utils.GetJwtId(c), rawJson["content"].(string))
 	if ok {
 		response.OkWithMessage("创建想法成功", c)
 	} else {
@@ -37,16 +34,17 @@ func (e *IdeaApi) GetIdeaList(c *gin.Context) {
 		return
 	}
 
-	if err, list, total := ideaService.GetIdeaList(info.Idea, info.PageInfo, info.OrderKey, info.Desc); err != nil {
+	if err, list, total, num := ideaService.GetIdeaList(info.Idea, info.PageInfo, info.OrderKey, info.Desc); err != nil {
 		global.IDEA_LOG.Error("获取想法列表失败!", zap.Error(err))
 		response.FailWithMessage("获取想法列表失败", c)
 	} else {
 		response.OkWithDetailed(response.PageResult{
 			List:     list,
 			Total:    total,
+			Num:      num,
 			Page:     info.Page,
 			PageSize: info.PageSize,
-		}, "获取成功", c)
+		}, "获取想法列表成功", c)
 	}
 }
 
@@ -57,7 +55,7 @@ func (e *IdeaApi) GetIdeaInfo(c *gin.Context) {
 		global.IDEA_LOG.Error("查询想法失败", zap.Error(err))
 		response.FailWithMessage("查询想法失败", c)
 	} else {
-		response.OkWithData(ideaInfo, c)
+		response.OkWithDetailed(ideaInfo, "查询想法成功", c)
 	}
 }
 

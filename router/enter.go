@@ -7,7 +7,7 @@ import (
 
 type RouterGroup struct {
 	User user.RouterGroup
-	Idea idea.IdeaRouter
+	Idea idea.RouterGroup
 }
 
 var RouterGroupApp = new(RouterGroup)

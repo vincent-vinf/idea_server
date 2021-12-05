@@ -17,5 +17,5 @@ func (u *UserApi) GetMyInfo(c *gin.Context) {
 		response.Fail(c)
 		return
 	}
-	response.OkWithData(userInfo, c)
+	response.OkWithDetailed(userInfo, "获取个人信息成功", c)
 }
