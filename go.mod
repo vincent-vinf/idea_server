@@ -8,6 +8,7 @@ require (
 	github.com/fvbock/endless v0.0.0-20170109170031-447134032cb6
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-redis/redis/v8 v8.11.4
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.9.0
 	github.com/unrolled/secure v1.0.9
 	go.uber.org/zap v1.17.0

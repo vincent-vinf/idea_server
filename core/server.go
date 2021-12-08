@@ -15,6 +15,8 @@ type server interface {
 func RunServer() {
 	// 初始化 redis 服务
 	initialize.Redis()
+	// 定时任务
+	go initialize.Cron()
 
 	Router := initialize.Routers()
 
