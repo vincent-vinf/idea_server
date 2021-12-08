@@ -8,7 +8,6 @@ import (
 	"idea_server/global"
 	"idea_server/model/user"
 	"idea_server/model/user/request"
-	"idea_server/model/user/response"
 	"idea_server/service"
 	"idea_server/utils"
 	"idea_server/utils/constant"
@@ -41,7 +40,7 @@ func JWTAuth() (*jwt.GinJWTMiddleware, error) {
 		// 获取个人信息
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			userInfo := &response.UserResponse{}
+			userInfo := &user.User{}
 			id, err := strconv.Atoi(claims[constant.IdentityKey].(string))
 			if err != nil {
 				global.IDEA_LOG.Error("IdentityHandler 错误", zap.Error(err))

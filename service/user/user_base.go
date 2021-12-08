@@ -1,6 +1,7 @@
 package user
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,7 +12,9 @@ import (
 	"idea_server/model/user"
 	"idea_server/model/user/request"
 	"idea_server/utils"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -50,9 +53,22 @@ func (u *UserBaseService) Register(regInfo request.Register) (bool, error) {
 	//if !u.IsCorrectEmailCode(regInfo.Email, regInfo.Code) {
 	//	return false, errors.New("验证码不存在或者已过期")
 	//}
+	var maxId int
+	err := global.IDEA_DB.Select("id").Last(&user.User{}).Row().Scan(&maxId)
+	if err != nil {
+		return false, err
+	}
+
+	avatarInfo := "{\"userId\": \"" + strconv.Itoa(maxId + 1)  + "\"}"
+	res, _ := http.Post("http://127.0.0.1:9998/get_avatar_url", "application/json", bytes.NewBuffer([]byte(avatarInfo)))
+	data, _ := ioutil.ReadAll(res.Body)
+	if res.StatusCode != 200 {
+		return false, errors.New(string(data))
+	}
+
 
 	// 新建用户
-	err := global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd}).Error
+	err = global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd, Avatar: string(data)}).Error
 	if  err != nil {
 		return false, err
 	}

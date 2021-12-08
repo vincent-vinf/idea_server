@@ -13,4 +13,5 @@ type IdeaListResponse struct {
 type IdeaInfoResponse struct {
 	idea.Idea
 	Comments response.PageResult `json:"comments"`
+	IsLike bool `json:"isLike"`
 }

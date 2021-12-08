@@ -8,6 +8,7 @@ type User struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Passwd   string `json:"passwd"`
+	Avatar   string `json:"avatar"`
 }
 
 // TableName User 表名

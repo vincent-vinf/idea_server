@@ -51,6 +51,7 @@ func Routers() *gin.Engine {
 		userRouter.InitUserRouter(PrivateGroup)
 		ideaRouter.InitIdeaRouter(PrivateGroup)
 		ideaRouter.InitIdeaCommentRouter(PrivateGroup)
+		ideaRouter.InitIdeaLikeRouter(PrivateGroup)
 	}
 	// TODO install plugin see gva
 

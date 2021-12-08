@@ -8,7 +8,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 	"idea_server/global"
-	"idea_server/model/user/response"
+	"idea_server/model/user"
 	"idea_server/utils/constant"
 	"math"
 	"strconv"
@@ -32,7 +32,7 @@ func LimitLogin() gin.HandlerFunc {
 		//exp := claims["exp"].(float64)
 		// 获取 id
 		tokenInfo, _ := c.Get(constant.IdentityKey)
-		key := spaceName + tokenInfo.(*response.UserResponse).Email
+		key := spaceName + tokenInfo.(*user.User).Email
 
 		ctx := context.Background()
 

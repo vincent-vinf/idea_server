@@ -2,7 +2,7 @@ package utils
 
 var (
 	IdVerify       = Rules{"ID": {NotEmpty()}}
-	PageInfoVerify = Rules{"Page": {NotEmpty()}, "PageSize": {NotEmpty()}}
+	PageInfoVerify = Rules{"Page": {Gt("0")}, "PageSize": {NotEmpty()}}
 	RegisterVerify = Rules{
 		"Username": {NotEmpty()},
 		"Email":    {RegexpMatch("^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$")},

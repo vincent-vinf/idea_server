@@ -11,6 +11,7 @@ import (
 )
 
 var ideaCommentService = new(IdeaCommentService)
+var ideaLikeService = new(IdeaLikeService)
 
 type mdRegexp struct {
 	expr string
@@ -88,11 +89,11 @@ var mdRegexps = []mdRegexp{
 	//	expr: "\\r\\n",
 	//	repl: "",
 	//},
-	// 全局匹配换行
-	//{
-	//	expr: "\\n",
-	//	repl: "",
-	//},
+	//全局匹配换行
+	{
+		expr: "\\\\n",
+		repl: "\n",
+	},
 	// 全局匹配空字符
 	//{
 	//	expr: "\\s",
@@ -121,7 +122,7 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	// TODO life
 
 	simple := e.SimpleContent(content)
-	fmt.Println("simple", simple)
+	//fmt.Println("simple", simple)
 	idea := idea.Idea{
 		UserId:  userId,
 		Simple:  simple,
@@ -136,7 +137,7 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	return true, nil
 }
 
-func (e *IdeaService) GetIdeaInfo(info *request.GetById) (interface{}, error) {
+func (e *IdeaService) GetIdeaInfo(info *request.GetById, userId uint) (interface{}, error) {
 	err, list, total, num := ideaCommentService.GetCommentList(idea.IdeaComment{IdeaId: info.Uint()}, request.PageInfo{
 		Page:     1,
 		PageSize: 10,
@@ -159,10 +160,11 @@ func (e *IdeaService) GetIdeaInfo(info *request.GetById) (interface{}, error) {
 			Page:     1,
 			PageSize: 10,
 		},
+		IsLike: ideaLikeService.IsLike(userId, info.Uint()),
 	}, nil
 }
 
-func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool) (err error, list interface{}, total int64, num int) {
+func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool, userId uint) (err error, list interface{}, total int64, num int) {
 	limit := pageInfo.PageSize
 	offset := pageInfo.PageSize * (pageInfo.Page - 1)
 	db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
@@ -210,8 +212,7 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 		}
 		// 减少传输字节
 		//ideaList[index].Content = ""
-		// TODO IsLike
-		ideaList[index].IsLike = false
+		ideaList[index].IsLike = ideaLikeService.IsLike(userId, ideaList[index].ID)
 	}
 	return err, ideaList, total, len(ideaList)
 }

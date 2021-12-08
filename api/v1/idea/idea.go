@@ -34,7 +34,7 @@ func (e *IdeaApi) GetIdeaList(c *gin.Context) {
 		return
 	}
 
-	if err, list, total, num := ideaService.GetIdeaList(info.Idea, info.PageInfo, info.OrderKey, info.Desc); err != nil {
+	if err, list, total, num := ideaService.GetIdeaList(info.Idea, info.PageInfo, info.OrderKey, info.Desc, utils.GetJwtId(c)); err != nil {
 		global.IDEA_LOG.Error("获取想法列表失败!", zap.Error(err))
 		response.FailWithMessage("获取想法列表失败", c)
 	} else {
@@ -51,7 +51,7 @@ func (e *IdeaApi) GetIdeaList(c *gin.Context) {
 func (e *IdeaApi) GetIdeaInfo(c *gin.Context) {
 	var info request.GetById
 	_ = c.ShouldBindJSON(&info)
-	if ideaInfo, err := ideaService.GetIdeaInfo(&info); err != nil {
+	if ideaInfo, err := ideaService.GetIdeaInfo(&info, utils.GetJwtId(c)); err != nil {
 		global.IDEA_LOG.Error("查询想法失败", zap.Error(err))
 		response.FailWithMessage("查询想法失败", c)
 	} else {

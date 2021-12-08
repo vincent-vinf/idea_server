@@ -14,6 +14,7 @@ func (e UserRouter) InitUserRouter(Router *gin.RouterGroup)  {
 	var userApi = v1.ApiGroupApp.UserApiGroup.UserApi
 	{
 		customerRouter.POST("get_my_info", userApi.GetMyInfo)
+		customerRouter.POST("get_user_info", userApi.GetUserInfo)
 	}
 
 }

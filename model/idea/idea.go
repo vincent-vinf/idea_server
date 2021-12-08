@@ -2,7 +2,7 @@ package idea
 
 import "idea_server/global"
 
-// Idea 结构体
+// IdeaLike 结构体
 type Idea struct {
 	global.IDEA_MODEL
 	UserId  uint    `json:"userId"`
