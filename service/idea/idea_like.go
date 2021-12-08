@@ -2,7 +2,6 @@ package idea
 
 import (
 	"errors"
-	"fmt"
 	"gorm.io/gorm"
 	"idea_server/global"
 	"idea_server/model/idea"
@@ -17,8 +16,6 @@ func (e *IdeaLikeService) CreateLike(userId, ideaId uint) (err error) {
 	}
 
 	err = global.IDEA_DB.Create(&idea.IdeaLike{IdeaId: ideaId, UserId: userId}).Error
-	//TODO nil
-	fmt.Println("err", err)
 	return
 }
 
@@ -37,4 +34,11 @@ func (e *IdeaLikeService) IsLike(userId, ideaId uint) bool {
 		return false
 	}
 	return true
+}
+
+func (e *IdeaLikeService) GetLikeCount(ideaId uint) (cnt int64) {
+	if err := global.IDEA_DB.Model(&idea.IdeaLike{}).Where("idea_id = ?", ideaId).Count(&cnt).Error; err != nil {
+		return 0
+	}
+	return
 }

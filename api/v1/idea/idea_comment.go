@@ -7,7 +7,6 @@ import (
 	"idea_server/model/common/request"
 	"idea_server/model/common/response"
 	"idea_server/model/idea"
-	ideaReq "idea_server/model/idea/request"
 	"idea_server/utils"
 )
 
@@ -43,28 +42,5 @@ func (e *IdeaCommentApi) DeleteComment(c *gin.Context) {
 		response.FailWithMessage("删除评论失败", c)
 	} else {
 		response.OkWithMessage("删除评论成功", c)
-	}
-}
-
-func (e *IdeaCommentApi) GetCommentList(c *gin.Context) {
-	var info ideaReq.GetIdeaCommentListReq
-	_ = c.ShouldBindJSON(&info)
-
-	if err := utils.Verify(info.PageInfo, utils.PageInfoVerify); err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-
-	if err, list, total, num := ideaCommentService.GetCommentList(info.IdeaComment, info.PageInfo, info.OrderKey, info.Desc); err != nil {
-		global.IDEA_LOG.Error("获取想法列表失败!", zap.Error(err))
-		response.FailWithMessage("获取想法列表失败", c)
-	} else {
-		response.OkWithDetailed(response.PageResult{
-			List:     list,
-			Total:    total,
-			Num:      num,
-			Page:     info.Page,
-			PageSize: info.PageSize,
-		}, "获取成功", c)
 	}
 }

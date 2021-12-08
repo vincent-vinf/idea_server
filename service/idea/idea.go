@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"idea_server/global"
 	"idea_server/model/common/request"
-	"idea_server/model/common/response"
 	"idea_server/model/idea"
 	ideaRes "idea_server/model/idea/response"
 	"regexp"
@@ -138,28 +137,19 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 }
 
 func (e *IdeaService) GetIdeaInfo(info *request.GetById, userId uint) (interface{}, error) {
-	err, list, total, num := ideaCommentService.GetCommentList(idea.IdeaComment{IdeaId: info.Uint()}, request.PageInfo{
-		Page:     1,
-		PageSize: 10,
-	}, "", false)
+	err, comments := ideaCommentService.GetComment(info.Uint())
 	if err != nil {
 		return nil, err
 	}
 
-	i := idea.Idea{}
-	result := global.IDEA_DB.First(&i, info.Uint())
-	if result.Error != nil {
-		return nil, result.Error
-	}
+	//i := idea.Idea{}
+	//result := global.IDEA_DB.First(&i, info.Uint())
+	//if result.Error != nil {
+	//	return nil, result.Error
+	//}
 	return &ideaRes.IdeaInfoResponse{
-		Idea: i,
-		Comments: response.PageResult{
-			List:     list,
-			Total:    total,
-			Num:      num,
-			Page:     1,
-			PageSize: 10,
-		},
+		//Idea: i,
+		Comments: comments,
 		IsLike: ideaLikeService.IsLike(userId, info.Uint()),
 	}, nil
 }
@@ -167,7 +157,8 @@ func (e *IdeaService) GetIdeaInfo(info *request.GetById, userId uint) (interface
 func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool, userId uint) (err error, list interface{}, total int64, num int) {
 	limit := pageInfo.PageSize
 	offset := pageInfo.PageSize * (pageInfo.Page - 1)
-	db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
+	//db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
+	db := global.IDEA_DB.Model(&idea.Idea{})
 	ideaList := make([]ideaRes.IdeaListResponse, 0, 1)
 
 	// 添加一些条件
@@ -213,6 +204,23 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 		// 减少传输字节
 		//ideaList[index].Content = ""
 		ideaList[index].IsLike = ideaLikeService.IsLike(userId, ideaList[index].ID)
+		ideaList[index].LikeCount = ideaLikeService.GetLikeCount(ideaList[index].ID)
 	}
 	return err, ideaList, total, len(ideaList)
+}
+
+func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes.SimilarIdea, err error) {
+	similarIdeas = make([]ideaRes.SimilarIdea, 0, 5)
+	for i := 0; i < 5; i ++ {
+		var idea idea.Idea
+		err = global.IDEA_DB.Find(&idea, i + 1).Error
+		if err != nil {
+			return make([]ideaRes.SimilarIdea, 0, 1), err
+		}
+		similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
+			Idea:       idea,
+			Similarity: float64(i) * 0.1,
+		})
+	}
+	return
 }

@@ -13,6 +13,10 @@ func (r *GetByIdeaId) Uint() uint {
 	return uint(r.IdeaId)
 }
 
+type GetSimilarIdeasReq struct {
+	Text string
+}
+
 type SearchIdeaParams struct {
 	idea.Idea
 	request.PageInfo

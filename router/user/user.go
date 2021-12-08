@@ -5,16 +5,16 @@ import (
 	v1 "idea_server/api/v1"
 )
 
-type UserRouter struct {
+type UserFollowRouter struct {
 
 }
 
-func (e UserRouter) InitUserRouter(Router *gin.RouterGroup)  {
+func (e UserFollowRouter) InitUserFollowRouter(Router *gin.RouterGroup)  {
 	customerRouter := Router.Group("user")
-	var userApi = v1.ApiGroupApp.UserApiGroup.UserApi
+	var userFollowApi = v1.ApiGroupApp.UserApiGroup.UserFollowApi
 	{
-		customerRouter.POST("get_my_info", userApi.GetMyInfo)
-		customerRouter.POST("get_user_info", userApi.GetUserInfo)
+		customerRouter.POST("create_follow", userFollowApi.CreatFollow)
+		customerRouter.POST("delete_follow", userFollowApi.DeleteFollow)
 	}
 
 }

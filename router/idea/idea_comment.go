@@ -15,6 +15,5 @@ func (e IdeaCommentRouter) InitIdeaCommentRouter(Router *gin.RouterGroup)  {
 	{
 		customerRouter.POST("create_comment", ideaCommentApi.CreateComment)
 		customerRouter.POST("delete_comment", ideaCommentApi.DeleteComment)
-		customerRouter.POST("get_comment_list", ideaCommentApi.GetCommentList)
 	}
 }

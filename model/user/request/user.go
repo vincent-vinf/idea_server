@@ -12,3 +12,11 @@ type Register struct {
 	Passwd   string `json:"passwd" form:"passwd"`
 	//Code     string `json:"code" form:"code"`
 }
+
+type GetByFollowedId struct {
+	FollowedId float64 `json:"followedId"`
+}
+
+func (r *GetByFollowedId) Uint() uint {
+	return uint(r.FollowedId)
+}

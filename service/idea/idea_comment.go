@@ -4,8 +4,8 @@ import (
 	"errors"
 	"gorm.io/gorm"
 	"idea_server/global"
-	"idea_server/model/common/request"
 	"idea_server/model/idea"
+	ideaRes "idea_server/model/idea/response"
 )
 
 type IdeaCommentService struct {
@@ -35,15 +35,26 @@ func (e *IdeaCommentService) DeleteComment(id uint) error {
 	return nil
 }
 
-func (e *IdeaCommentService) GetCommentList(ideaCommentInfo idea.IdeaComment, pageInfo request.PageInfo, order string, desc bool) (err error, list interface{}, total int64, num int) {
-	ideaComments := make([]idea.IdeaComment, 0, 1)
-	limit := pageInfo.PageSize
-	offset := pageInfo.PageSize * (pageInfo.Page - 1)
-	db := global.IDEA_DB.Model(&idea.IdeaComment{}).Where("idea_id = ?", ideaCommentInfo.IdeaId)
+func (e *IdeaCommentService) GetComment(ideaId uint) (err error, comments []ideaRes.IdeaCommentResponse) {
+	var c []idea.IdeaComment // 回复想法
+	var c2 []idea.IdeaComment // 回复评论
 
-	if err = db.Count(&total).Error; err != nil {
-		return err, ideaComments, total, 0
+	err =global.IDEA_DB.Where("idea_id = ? AND comment_id = ?", ideaId, 0).Find(&c).Error
+	if err != nil {
+		return err, make([]ideaRes.IdeaCommentResponse, 0, 1)
 	}
-	err = db.Limit(limit).Offset(offset).Order("created_at").Find(&ideaComments).Error
-	return err, ideaComments, total, len(ideaComments)
+
+	comments = make([]ideaRes.IdeaCommentResponse, len(c), cap(c))
+
+	for index, _ := range c {
+		comments[index].IdeaComment = c[index]
+		err = global.IDEA_DB.Where("idea_id = ? AND comment_id = ?", ideaId, c[index].ID).Find(&c2).Error
+		comments[index].Replys = c2
+		// TODO 容错性
+		if err != nil {
+			return err, make([]ideaRes.IdeaCommentResponse, 0, 1)
+		}
+	}
+
+	return nil, comments
 }

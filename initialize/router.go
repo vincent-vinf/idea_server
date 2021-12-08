@@ -49,6 +49,7 @@ func Routers() *gin.Engine {
 	PrivateGroup.Use(authMiddleware.MiddlewareFunc()).Use(middleware.LimitLogin())
 	{
 		userRouter.InitUserRouter(PrivateGroup)
+		userRouter.InitUserFollowRouter(PrivateGroup)
 		ideaRouter.InitIdeaRouter(PrivateGroup)
 		ideaRouter.InitIdeaCommentRouter(PrivateGroup)
 		ideaRouter.InitIdeaLikeRouter(PrivateGroup)

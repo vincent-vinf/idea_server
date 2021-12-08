@@ -59,6 +59,17 @@ func (e *IdeaApi) GetIdeaInfo(c *gin.Context) {
 	}
 }
 
+func (e *IdeaApi) GetSimilarIdeas(c *gin.Context) {
+	var info ideaReq.GetSimilarIdeasReq
+	_ = c.ShouldBindJSON(&info)
+	if list, err := ideaService.GetSimilarIdeasByText(info.Text); err != nil {
+		global.IDEA_LOG.Error("获取相似想法失败", zap.Error(err))
+		response.FailWithMessage("获取相似想法失败", c)
+	} else {
+		response.OkWithDetailed(list, "获取相似想法成功", c)
+	}
+}
+
 func (e *IdeaApi) UpdateIdea(c *gin.Context) {
 
 }

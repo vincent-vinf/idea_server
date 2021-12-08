@@ -6,6 +6,7 @@ import (
 	"idea_server/global"
 	"idea_server/model/common/request"
 	"idea_server/model/common/response"
+	"idea_server/utils"
 	"idea_server/utils/constant"
 )
 
@@ -26,7 +27,7 @@ func (u *UserApi) GetMyInfo(c *gin.Context) {
 func (u *UserApi) GetUserInfo(c *gin.Context) {
 	var ids request.IdsReq
 	_ = c.ShouldBindJSON(&ids)
-	if info, err := userService.GetUserInfo(ids.Ids); err != nil {
+	if info, err := userService.GetUserInfo(ids.Ids, utils.GetJwtId(c)); err != nil {
 		global.IDEA_LOG.Error("获取用户信息失败", zap.Error(err))
 		response.FailWithMessage("获取用户信息失败", c)
 	} else  {
