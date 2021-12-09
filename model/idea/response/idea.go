@@ -6,8 +6,9 @@ import (
 
 type IdeaListResponse struct {
 	idea.Idea
-	IsLike bool `json:"isLike"`
-	LikeCount int64 `json:"likeCount"`
+	TypeName  string `json:"typeName"`
+	IsLike    bool   `json:"isLike"`
+	LikeCount int64  `json:"likeCount"`
 }
 
 type IdeaCommentResponse struct {
@@ -18,10 +19,16 @@ type IdeaCommentResponse struct {
 type SimilarIdea struct {
 	idea.Idea
 	Similarity float64 `json:"similarity"`
+	TypeName  string `json:"typeName"`
 }
 
 type IdeaInfoResponse struct {
 	//idea.Idea
 	Comments []IdeaCommentResponse `json:"comments"`
-	IsLike bool `json:"isLike"`
+	IsLike   bool                  `json:"isLike"`
+}
+
+type SimilarModelResponse struct {
+	IdeaId uint `json:"ideaId"`
+	Similarity float64 `json:"similarity"`
 }

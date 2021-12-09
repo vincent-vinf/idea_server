@@ -27,12 +27,27 @@ func (e *IdeaCommentService) CreateComment(info *idea.IdeaComment) error {
 }
 
 func (e *IdeaCommentService) DeleteComment(id uint) error {
-	//err := global.IDEA_DB.Where("idea_id = ? AND user_id = ? AND to_id = ?",  info.IdeaId, info.UserId, info.ToId).Delete(&idea.IdeaComment{}).Error
-	err := global.IDEA_DB.Delete(&idea.IdeaComment{}, id).Error
-	if err != nil {
-		return err
-	}
-	return nil
+	// 事务
+	err := global.IDEA_DB.Transaction(func(tx *gorm.DB) error {
+		var comment idea.IdeaComment
+		if err := tx.Find(&comment, id).Error ; err != nil {
+			return err
+		}
+
+		if comment.CommentId == 0 { // 删除直接回复评论的子评论
+			if err := tx.Where("comment_id = ?", comment.ID).Delete(&idea.IdeaComment{}).Error ; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Delete(&idea.IdeaComment{}, id).Error; err != nil {
+			return err
+		}
+
+		// 返回 nil 提交事务
+		return nil
+	})
+	return err
 }
 
 func (e *IdeaCommentService) GetComment(ideaId uint) (err error, comments []ideaRes.IdeaCommentResponse) {

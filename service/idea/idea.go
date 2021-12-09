@@ -1,13 +1,20 @@
 package idea
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"idea_server/global"
 	"idea_server/model/common/request"
 	"idea_server/model/idea"
 	ideaRes "idea_server/model/idea/response"
+	"io/ioutil"
 	"math"
+	"net/http"
+	"os"
 	"regexp"
 	"time"
 )
@@ -15,12 +22,12 @@ import (
 var ideaCommentService = new(IdeaCommentService)
 var ideaLikeService = new(IdeaLikeService)
 
-type mdRegexp struct {
+type RepRegexp struct {
 	expr string
 	repl string
 }
 
-var mdRegexps = []mdRegexp{
+var mdRegexps = []RepRegexp{
 	// 全局匹配内粗体
 	{
 		expr: "(\\*\\*|__)(.*?)(\\*\\*|__)",
@@ -103,7 +110,52 @@ var mdRegexps = []mdRegexp{
 	//},
 }
 
+var escapeRegexps = []RepRegexp {
+	// \，注意要 4 个，一定要在 \n 之前
+	{
+		expr: "\\\\",
+		repl: "\\\\",
+	},
+	// 回车
+	{
+		expr: "\\n",
+		repl: "\\n",
+	},
+	// 双引号
+	{
+		expr: "\"",
+		repl: "\\\"",
+	},
+	// 空格
+	{
+		expr: "\\s",
+		repl: "",
+	},
+}
+
 type IdeaService struct {
+}
+
+func (e *IdeaService) GetClassification(text string) (typeId uint, err error) {
+	// 解决转义
+	for _, value := range escapeRegexps {
+		//fmt.Println("value", value)
+		if r, err := regexp.Compile(value.expr); err != nil {
+			fmt.Println("正则表示式编译错误", err)
+			return 0, errors.New("获取分类失败——正则表达式编译错误")
+		} else {
+			text = r.ReplaceAllString(text, value.repl)
+		}
+	}
+	jsonData := "{\"text\": [\"" + text + "\"]}"
+	//fmt.Println("jsonData", jsonData)
+	res, _ := http.Post("http://hlj.vinf.top/model_classfication", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	defer res.Body.Close()
+	data, _ := ioutil.ReadAll(res.Body)
+	var m []uint
+	_ = json.Unmarshal(data, &m)
+	//fmt.Println("m", m)
+	return m[0], nil
 }
 
 func (e *IdeaService) SimpleContent(content string) string {
@@ -120,19 +172,37 @@ func (e *IdeaService) SimpleContent(content string) string {
 	return content
 }
 
+func noticeAddingIndexes(text string) (err error) {
+	jsonData := "{\"text\": [\"" + text + "\"]}"
+	_, err = http.Post("http://hlj.vinf.top/model_addsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	return
+}
+
 func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	life := getLife(0, 0, 0)
 	simple := e.SimpleContent(content)
-	//fmt.Println("simple", simple)
-	idea := idea.Idea{
+	fmt.Println("simple", simple)
+
+	// 通知添加索引
+	// TODO 是否需要做多线程
+	//err := noticeAddingIndexes(simple)
+	//if err != nil {
+	//	return false, errors.New("通知添加索引失败：" + err.Error())
+	//}
+	typeId, err := e.GetClassification(simple)
+	if err != nil {
+		return false, errors.New("获取类型失败：" + err.Error())
+	}
+	i := idea.Idea{
 		UserId:  userId,
 		Simple:  simple,
 		Content: content,
 		Life:    life,
 		Level:   1,
+		TypeId:  typeId, // TODO 修改成固定值
 	}
 
-	result := global.IDEA_DB.Create(&idea)
+	result := global.IDEA_DB.Create(&i)
 	if result.Error != nil {
 		return false, result.Error
 	}
@@ -201,7 +271,7 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	for _, v := range ideas {
 		r := []rune(v.Simple)
 		if len(r) > 40 {
-			v.Simple = string(r[:40])
+			v.Simple = string(r[:60])
 		} else {
 			v.Simple = string(r)
 		}
@@ -210,6 +280,7 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 			Idea:      v,
 			IsLike:    ideaLikeService.IsLike(userId, v.ID),
 			LikeCount: ideaLikeService.GetLikeCount(v.ID),
+			TypeName:  e.GetIdeaTypeName(v.TypeId),
 		}
 		ideaListResponses = append(ideaListResponses, response)
 	}
@@ -217,19 +288,57 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 }
 
 func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes.SimilarIdea, err error) {
-	similarIdeas = make([]ideaRes.SimilarIdea, 0, 5)
-	for i := 0; i < 5; i++ {
-		var idea idea.Idea
-		err = global.IDEA_DB.Find(&idea, i+1).Error
-		if err != nil {
-			return make([]ideaRes.SimilarIdea, 0, 1), err
+	jsonData := "{\"text\": \"" + text + "\"}"
+	res, _ := http.Post("http://hlj.vinf.top/model_findsimilar", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	defer res.Body.Close()
+	data, _ := ioutil.ReadAll(res.Body)
+	var result []ideaRes.SimilarModelResponse
+	_ = json.Unmarshal(data, &result)
+	fmt.Println("result", result)
+	for _, v := range result {
+		var i idea.Idea
+		if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId).Error, gorm.ErrRecordNotFound) {
+			r := []rune(i.Simple)
+			if len(r) > 40 {
+				i.Simple = string(r[:60])
+			} else {
+				i.Simple = string(r)
+			}
+			similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
+				Idea:       i,
+				Similarity: v.Similarity,
+				TypeName:  e.GetIdeaTypeName(i.TypeId),
+			})
 		}
-		similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
-			Idea:       idea,
-			Similarity: float64(i) * 0.1,
-		})
 	}
+	//similarIdeas = make([]ideaRes.SimilarIdea, 0, 5)
+	//for j := 0; j < 5; j++ {
+	//	var i idea.Idea
+	//	err = global.IDEA_DB.Find(&i, j+1).Error
+	//	if err != nil {
+	//		return make([]ideaRes.SimilarIdea, 0, 1), err
+	//	}
+	//	r := []rune(i.Simple)
+	//	if len(r) > 40 {
+	//		i.Simple = string(r[:60])
+	//	} else {
+	//		i.Simple = string(r)
+	//	}
+	//	similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
+	//		Idea:       i,
+	//		Similarity: float64(j) * 0.1,
+	//	})
+	//}
 	return
+}
+
+func (e *IdeaService) GetIdeaTypeName(typeId uint) string {
+	if typeId == 0 {
+		return ""
+	}
+	var t idea.IdeaType
+	global.IDEA_DB.Find(&t, typeId)
+	return t.Name
 }
 
 func getLife(p, r, t float64) float64 {
@@ -273,4 +382,31 @@ func (e *IdeaService) LifeCronFunc() {
 	}
 	global.IDEA_LOG.Info("更新生命值定时任务——成功！")
 	fmt.Println("更新生命值定时任务——成功！")
+}
+
+func (e *IdeaService) UserWeightCronFunc() {
+
+}
+
+func (e *IdeaService) Convert() {
+	var count int64
+	global.IDEA_DB.Model(&idea.Idea{}).Count(&count)
+	for j := 1015; j <= int(count); j++ {
+		// 一定要每次初始化一个新对象
+		var i idea.Idea
+		err := global.IDEA_DB.First(&i, j).Error
+		simple := e.SimpleContent(i.Content)
+		typeId, err := e.GetClassification(simple)
+		if err != nil {
+			fmt.Println("错误转换 id", j)
+			os.Exit(1)
+		}
+		err = global.IDEA_DB.Model(&idea.Idea{}).Where("id = ?", j).Updates(map[string]interface{}{"simple": simple, "life": 0, "level": 1, "type_id": typeId}).Error
+		if err != nil {
+			fmt.Println("错误转换 id", j)
+			os.Exit(1)
+		}
+		//fmt.Println("成功转换 id", j)
+	}
+	fmt.Println("转换成功")
 }
