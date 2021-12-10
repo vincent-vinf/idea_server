@@ -28,6 +28,11 @@ func (e *UserService) GetUserInfo(ids []int, userId uint) (infos []userRes.UserI
 	return
 }
 
+func (e *UserService) GetUserWeight(id uint) (weight uint, err error) {
+	err = global.IDEA_DB.Model(&user.User{}).Where("id = ?", id).Select("weight").Find(&weight).Error
+	return
+}
+
 func getWeight(pGet, pSend, rGet, rSent, pOstnum, fOcusnum float64) uint {
 	p := 2*math.Log10(pGet+1) + math.Log10(pSend+1)
 	r := 2*math.Log10(rGet+1) + math.Log10(rSent+1)
@@ -64,6 +69,7 @@ func UserWeightCronFunc() {
 		var ideaIds []uint
 		if err := global.IDEA_DB.Model(&idea.Idea{}).Select("id").Where("user_id = ?", v).Find(&ideaIds).Error; err != nil {
 			global.IDEA_LOG.Error("更新用户权值定时任务——获取 id "+strconv.Itoa(int(v))+" 用户发布想法失败！", zap.Error(err))
+			continue
 		}
 		pOstnum = float64(len(ideaIds))
 		//fmt.Println("ideaIds", ideaIds)
@@ -72,6 +78,7 @@ func UserWeightCronFunc() {
 			// 用户收到的点赞数
 			if err := global.IDEA_DB.Model(&idea.IdeaLike{}).Where("idea_id = ?", v2).Count(&cnt).Error; err != nil {
 				global.IDEA_LOG.Error("更新用户权值定时任务——获取 id "+strconv.Itoa(int(v))+"用户收到的点赞数失败！", zap.Error(err))
+				continue
 			}
 			pSum += cnt
 			//fmt.Println("cnt p", cnt)
@@ -79,6 +86,7 @@ func UserWeightCronFunc() {
 			// 用户收到的评论数
 			if err := global.IDEA_DB.Model(&idea.IdeaComment{}).Where("idea_id = ?", v2).Count(&cnt).Error; err != nil {
 				global.IDEA_LOG.Error("更新用户权值定时任务——获取 id "+strconv.Itoa(int(v))+"用户收到的评论数失败！", zap.Error(err))
+				continue
 			}
 			rSum += cnt
 			//fmt.Println("cnt r", cnt)
@@ -91,6 +99,7 @@ func UserWeightCronFunc() {
 		// 用户给予的点赞数
 		if err := global.IDEA_DB.Model(&idea.IdeaLike{}).Where("user_id = ?", v).Count(&cnt).Error; err != nil {
 			global.IDEA_LOG.Error("更新用户权值定时任务——获取 id "+strconv.Itoa(int(v))+"用户给予的点赞数失败！", zap.Error(err))
+			continue
 		}
 		pSend = float64(cnt)
 		//fmt.Println("pSend", pSend)
@@ -98,6 +107,7 @@ func UserWeightCronFunc() {
 		// 用户给予的评论数
 		if err := global.IDEA_DB.Model(&idea.IdeaComment{}).Where("user_id = ?", v).Count(&cnt).Error; err != nil {
 			global.IDEA_LOG.Error("更新用户权值定时任务——获取 id "+strconv.Itoa(int(v))+"用户给予的评论数失败！", zap.Error(err))
+			continue
 		}
 		rSend = float64(cnt)
 		//fmt.Println("rSend", rSend)
@@ -105,6 +115,7 @@ func UserWeightCronFunc() {
 		// 用户被关注的人数
 		if err := global.IDEA_DB.Model(&user.UserFollow{}).Where("followed_id = ?", v).Count(&cnt).Error; err != nil {
 			global.IDEA_LOG.Error("更新用户权值定时任务——获取 id "+strconv.Itoa(int(v))+"用户被关注的人数失败！", zap.Error(err))
+			continue
 		}
 		fOcusnum = float64(cnt)
 		//fmt.Println("fOcusnum", fOcusnum)

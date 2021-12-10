@@ -11,16 +11,19 @@ import (
 	"idea_server/model/common/request"
 	"idea_server/model/idea"
 	ideaRes "idea_server/model/idea/response"
+	"idea_server/service/user"
 	"io/ioutil"
 	"math"
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"time"
 )
 
 var ideaCommentService = new(IdeaCommentService)
 var ideaLikeService = new(IdeaLikeService)
+var userService = new(user.UserService)
 
 type RepRegexp struct {
 	expr string
@@ -119,7 +122,11 @@ var escapeRegexps = []RepRegexp{
 	// 回车
 	{
 		expr: "\\n",
-		repl: "\\n",
+		repl: "",
+	},
+	{
+		expr: "\\r\\n",
+		repl: "",
 	},
 	// 双引号
 	{
@@ -206,7 +213,7 @@ func noticeAddingIndexes(text string) (err error) {
 }
 
 func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
-	life := getLife(0, 0, 0)
+	life := getLife(0, 0, 0, 1)
 	simple := e.SimpleContent(content)
 	//fmt.Println("simple", simple)
 
@@ -330,9 +337,12 @@ func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes
 		var result []ideaRes.SimilarModelResponse
 		_ = json.Unmarshal(data, &result)
 		fmt.Println("result", result)
+		if len(result) > 5 {
+			result = result[:5]
+		}
 		for _, v := range result {
 			var i idea.Idea
-			if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId).Error, gorm.ErrRecordNotFound) {
+			if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId+1).Error, gorm.ErrRecordNotFound) {
 				r := []rune(i.Simple)
 				if len(r) > 60 {
 					i.Simple = string(r[:60])
@@ -378,42 +388,95 @@ func (e *IdeaService) GetIdeaTypeName(typeId uint) string {
 	return t.Name
 }
 
-func getLife(p, r, t float64) float64 {
+func getLife(p, r, t, w float64) float64 {
 	g := 1.194
-	score := (p + 1.5*r + 20) / (math.Pow(t+2, g))
+	score := (p + 1.5*r + 20) / (math.Pow(t+2, g/w))
 	return score
 }
 
+type LifeCronField struct {
+	ID        uint
+	UserId    uint
+	Level     uint
+	CreatedAt time.Time
+}
+
+type CountGroupByUser struct {
+	UserId uint
+	Cnt    uint
+}
+
 func LifeCronFunc() {
-	var ideas []idea.Idea
-	if err := global.IDEA_DB.Where("level > 0").Find(&ideas).Error; err != nil {
-		global.IDEA_LOG.Error("更新生命值定时任务——获取想法列表失败！", zap.Error(err))
+	//fmt.Println(getLife(0, 0, 0, 1))
+	//fmt.Println(getLife(10, 5, 1, 8))
+	//fmt.Println(getLife(0, 0, 20, 1))
+	//fmt.Println(getLife(0, 0, 40, 1))
+
+	var ids []LifeCronField
+	if err := global.IDEA_DB.Model(&idea.Idea{}).Where("level > 0 AND id > 3988").Find(&ids).Error; err != nil {
+		global.IDEA_LOG.Error("更新生命值定时任务——获取想法 id 列表失败！", zap.Error(err))
+		return
 	}
 	now := time.Now()
-	for _, v := range ideas {
+	//fmt.Println("ids", ids)
+	for _, v := range ids {
+		// 点赞计算
+		var likeIds []uint
+		if err := global.IDEA_DB.Model(&idea.IdeaLike{}).Select("user_id").Where("idea_id = ?", v.ID).Find(&likeIds).Error; err != nil {
+			global.IDEA_LOG.Error("更新生命值定时任务——获取 id "+strconv.Itoa(int(v.ID))+" 想法点赞列表失败！", zap.Error(err))
+			continue
+		}
+		var pSum uint
+		for _, v2 := range likeIds {
+			weight, err := userService.GetUserWeight(v2)
+			if err != nil {
+				global.IDEA_LOG.Error("更新生命值定时任务——获取 id "+strconv.Itoa(int(v.ID))+" 想法点赞用户权值失败！", zap.Error(err))
+				continue
+			}
+			pSum += weight
+		}
+		p := float64(pSum)
+
+		// 评论计算 (Group)
+		var comments []CountGroupByUser
+		if err := global.IDEA_DB.Model(&idea.IdeaComment{}).Select("user_id, COUNT(*) as cnt").Where("idea_id = ?", v.ID).Group("user_id").Find(&comments).Error; err != nil {
+			global.IDEA_LOG.Error("更新生命值定时任务——获取 id "+strconv.Itoa(int(v.ID))+" 想法评论列表失败！", zap.Error(err))
+			continue
+		}
+		//fmt.Println("comments", comments)
+		var rSum uint
+		for _, v2 := range comments {
+			weight, err := userService.GetUserWeight(v2.UserId)
+			if err != nil {
+				global.IDEA_LOG.Error("更新生命值定时任务——获取 id "+strconv.Itoa(int(v.ID))+" 想法评论用户权值失败！", zap.Error(err))
+				continue
+			}
+			rSum += v2.Cnt * weight
+		}
+		r := float64(rSum)
+
 		// 距离发帖的时间
 		t := now.Sub(v.CreatedAt).Minutes() / 60
-		// p 点赞数，r 评论数
-		var p, r int64
-		if err := global.IDEA_DB.Model(&idea.IdeaLike{}).Where("idea_id = ?", v.ID).Count(&p).Error; err != nil {
-			global.IDEA_LOG.Error("更新生命值定时任务——统计想法点赞数失败！", zap.Error(err))
+		w, err := userService.GetUserWeight(v.UserId)
+		if err != nil {
+			global.IDEA_LOG.Error("更新生命值定时任务——获取 id "+strconv.Itoa(int(v.ID))+" 想法发布者权值失败！", zap.Error(err))
+			continue
 		}
-		if err := global.IDEA_DB.Model(&idea.IdeaComment{}).Where("idea_id = ?", v.ID).Count(&r).Error; err != nil {
-			global.IDEA_LOG.Error("更新生命值定时任务——统计想法评论数失败！", zap.Error(err))
-		}
-		//fmt.Println("t", t)
 		//fmt.Println("p", p)
 		//fmt.Println("r", r)
-		//fmt.Println("life: " + strconv.FormatFloat(getLife(float64(p), float64(r), t), 'f', 2, 64))
-		life := getLife(float64(p), float64(r), t)
+		//fmt.Println("t", t)
+		//fmt.Println("w", w)
+		life := getLife(p, r, t, float64(w))
 		level := v.Level
 		// TODO level 规则
-		if life > 11 {
+		if life > getLife(15, 5, 1, float64(w)) {
 			level = 2
-		} else if life < 0.5 && t < 1*24*60 {
+		} else if life < getLife(0, 0, 20, float64(w)) && t < 1*24*60 {
 			level = 0
 		}
-		if err := global.IDEA_DB.Model(&v).Update("life", life).Update("level", level).Error; err != nil {
+		fmt.Println("life", life)
+		fmt.Println("level", level)
+		if err := global.IDEA_DB.Model(&idea.Idea{}).Where("id = ?", v.ID).Update("life", life).Update("level", level).Error; err != nil {
 			global.IDEA_LOG.Error("更新生命值定时任务——更新生命值失败！", zap.Error(err))
 		}
 	}
