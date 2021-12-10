@@ -110,7 +110,7 @@ var mdRegexps = []RepRegexp{
 	//},
 }
 
-var escapeRegexps = []RepRegexp {
+var escapeRegexps = []RepRegexp{
 	// \，注意要 4 个，一定要在 \n 之前
 	{
 		expr: "\\\\",
@@ -151,11 +151,14 @@ func (e *IdeaService) GetClassification(text string) (typeId uint, err error) {
 	//fmt.Println("jsonData", jsonData)
 	res, _ := http.Post("http://hlj.vinf.top/model_classfication", "application/json", bytes.NewBuffer([]byte(jsonData)))
 	defer res.Body.Close()
-	data, _ := ioutil.ReadAll(res.Body)
-	var m []uint
-	_ = json.Unmarshal(data, &m)
-	//fmt.Println("m", m)
-	return m[0], nil
+	if res.StatusCode == 200 {
+		data, _ := ioutil.ReadAll(res.Body)
+		var m []uint
+		_ = json.Unmarshal(data, &m)
+		//fmt.Println("m", m)
+		return m[0], nil
+	}
+	return 0, errors.New("http 请求失败")
 }
 
 func (e *IdeaService) SimpleContent(content string) string {
@@ -172,6 +175,30 @@ func (e *IdeaService) SimpleContent(content string) string {
 	return content
 }
 
+func (e *IdeaService) AuditContent(text string) (err error) {
+	// 解决转义
+	for _, value := range escapeRegexps {
+		//fmt.Println("value", value)
+		if r, err := regexp.Compile(value.expr); err != nil {
+			fmt.Println("正则表示式编译错误", err)
+			return errors.New("获取分类失败——正则表达式编译错误")
+		} else {
+			text = r.ReplaceAllString(text, value.repl)
+		}
+	}
+	jsonData := "{\"text\": [\"" + text + "\"]}"
+	res, err := http.Post("http://127.0.0.1:9998/audit_content", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	if res.StatusCode != 200 {
+		// 服务出错
+		return err
+	}
+	data, _ := ioutil.ReadAll(res.Body)
+	if string(data) == "合规" {
+		return nil
+	}
+	return errors.New(string(data))
+}
+
 func noticeAddingIndexes(text string) (err error) {
 	jsonData := "{\"text\": [\"" + text + "\"]}"
 	_, err = http.Post("http://hlj.vinf.top/model_addsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
@@ -181,7 +208,13 @@ func noticeAddingIndexes(text string) (err error) {
 func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	life := getLife(0, 0, 0)
 	simple := e.SimpleContent(content)
-	fmt.Println("simple", simple)
+	//fmt.Println("simple", simple)
+
+	// 低俗辱骂过滤
+	err := e.AuditContent(simple)
+	if err != nil {
+		return false, err
+	}
 
 	// 通知添加索引
 	// TODO 是否需要做多线程
@@ -189,10 +222,7 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	//if err != nil {
 	//	return false, errors.New("通知添加索引失败：" + err.Error())
 	//}
-	typeId, err := e.GetClassification(simple)
-	if err != nil {
-		return false, errors.New("获取类型失败：" + err.Error())
-	}
+	typeId, _ := e.GetClassification(simple) // 失败则默认 0，无类型
 	i := idea.Idea{
 		UserId:  userId,
 		Simple:  simple,
@@ -231,7 +261,8 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	limit := pageInfo.PageSize
 	offset := pageInfo.PageSize * (pageInfo.Page - 1)
 	//db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
-	db := global.IDEA_DB.Debug().Model(&idea.Idea{})
+	//db := global.IDEA_DB.Debug().Model(&idea.Idea{}) // debug
+	db := global.IDEA_DB.Model(&idea.Idea{})
 	var ideas []idea.Idea
 	ideaListResponses := make([]ideaRes.IdeaListResponse, 0, pageInfo.PageSize)
 
@@ -239,6 +270,9 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	//if ideaInfo.Content != "" {
 	//	db = db.Where("content LIKE ?", "%"+ideaInfo.Content+"%")
 	//}
+	if ideaInfo.UserId != 0 {
+		db = db.Where("user_id = ?", ideaInfo.UserId)
+	}
 
 	err = db.Where("level > 0 AND content != \"\"").Count(&total).Error
 
@@ -291,44 +325,47 @@ func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes
 	jsonData := "{\"text\": \"" + text + "\"}"
 	res, _ := http.Post("http://hlj.vinf.top/model_findsimilar", "application/json", bytes.NewBuffer([]byte(jsonData)))
 	defer res.Body.Close()
-	data, _ := ioutil.ReadAll(res.Body)
-	var result []ideaRes.SimilarModelResponse
-	_ = json.Unmarshal(data, &result)
-	fmt.Println("result", result)
-	for _, v := range result {
-		var i idea.Idea
-		if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId).Error, gorm.ErrRecordNotFound) {
-			r := []rune(i.Simple)
-			if len(r) > 60 {
-				i.Simple = string(r[:60])
-			} else {
-				i.Simple = string(r)
+	if res.StatusCode == 200 {
+		data, _ := ioutil.ReadAll(res.Body)
+		var result []ideaRes.SimilarModelResponse
+		_ = json.Unmarshal(data, &result)
+		fmt.Println("result", result)
+		for _, v := range result {
+			var i idea.Idea
+			if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId).Error, gorm.ErrRecordNotFound) {
+				r := []rune(i.Simple)
+				if len(r) > 60 {
+					i.Simple = string(r[:60])
+				} else {
+					i.Simple = string(r)
+				}
+				similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
+					Idea:       i,
+					Similarity: v.Similarity,
+					TypeName:   e.GetIdeaTypeName(i.TypeId),
+				})
 			}
-			similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
-				Idea:       i,
-				Similarity: v.Similarity,
-				TypeName:  e.GetIdeaTypeName(i.TypeId),
-			})
 		}
+		return
 	}
-	//similarIdeas = make([]ideaRes.SimilarIdea, 0, 5)
-	//for j := 0; j < 5; j++ {
-	//	var i idea.Idea
-	//	err = global.IDEA_DB.Find(&i, j+1).Error
-	//	if err != nil {
-	//		return make([]ideaRes.SimilarIdea, 0, 1), err
-	//	}
-	//	r := []rune(i.Simple)
-	//	if len(r) > 40 {
-	//		i.Simple = string(r[:60])
-	//	} else {
-	//		i.Simple = string(r)
-	//	}
-	//	similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
-	//		Idea:       i,
-	//		Similarity: float64(j) * 0.1,
-	//	})
-	//}
+	similarIdeas = make([]ideaRes.SimilarIdea, 0, 5)
+	for j := 0; j < 5; j++ {
+		var i idea.Idea
+		err = global.IDEA_DB.Find(&i, j+1).Error
+		if err != nil {
+			return make([]ideaRes.SimilarIdea, 0, 1), err
+		}
+		r := []rune(i.Simple)
+		if len(r) > 40 {
+			i.Simple = string(r[:60])
+		} else {
+			i.Simple = string(r)
+		}
+		similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
+			Idea:       i,
+			Similarity: float64(j) * 0.1,
+		})
+	}
 	return
 }
 

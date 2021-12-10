@@ -46,7 +46,7 @@ func JWTAuth() (*jwt.GinJWTMiddleware, error) {
 				global.IDEA_LOG.Error("IdentityHandler 错误", zap.Error(err))
 				return nil
 			}
-			global.IDEA_DB.Model(&user.User{}).Where("id = ?", id).Find(userInfo)
+			global.IDEA_DB.Model(&user.User{}).Omit("passwd").Where("id = ?", id).Find(userInfo)
 			return userInfo
 		},
 		Authenticator: func(c *gin.Context) (interface{}, error) {

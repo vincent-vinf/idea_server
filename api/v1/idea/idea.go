@@ -21,7 +21,7 @@ func (e *IdeaApi) CreateIdea(c *gin.Context) {
 		response.OkWithMessage("创建想法成功", c)
 	} else {
 		global.IDEA_LOG.Error("创建想法失败", zap.Error(err))
-		response.FailWithMessage("创建想法失败", c)
+		response.FailWithDetailed(err.Error(), "创建想法失败", c)
 	}
 }
 
@@ -45,6 +45,31 @@ func (e *IdeaApi) GetIdeaList(c *gin.Context) {
 			Page:     info.Page,
 			PageSize: info.PageSize,
 		}, "获取想法列表成功", c)
+	}
+}
+
+func (e *IdeaApi) GetMyIdeaList(c *gin.Context) {
+	var info ideaReq.SearchIdeaParams
+	_ = c.ShouldBindJSON(&info)
+
+	if err := utils.Verify(info.PageInfo, utils.PageInfoVerify); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	info.UserId = utils.GetJwtId(c)
+
+	if err, list, total, num := ideaService.GetIdeaList(info.Idea, info.PageInfo, info.OrderKey, info.Desc, utils.GetJwtId(c)); err != nil {
+		global.IDEA_LOG.Error("获取我的想法列表失败!", zap.Error(err))
+		response.FailWithMessage("获取我的想法列表失败", c)
+	} else {
+		response.OkWithDetailed(response.PageResult{
+			List:     list,
+			Total:    total,
+			Num:      num,
+			Page:     info.Page,
+			PageSize: info.PageSize,
+		}, "获取我的想法列表成功", c)
 	}
 }
 

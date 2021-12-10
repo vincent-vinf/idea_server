@@ -16,6 +16,7 @@ func (e IdeaRouter) InitIdeaRouter(Router *gin.RouterGroup)  {
 		customerRouter.POST("create_idea", ideaApi.CreateIdea)
 		customerRouter.POST("get_idea_info", ideaApi.GetIdeaInfo)
 		customerRouter.POST("get_idea_list", ideaApi.GetIdeaList)
+		customerRouter.POST("get_my_idea_list", ideaApi.GetMyIdeaList)
 		customerRouter.POST("get_similar_ideas", ideaApi.GetSimilarIdeas)
 	}
 
