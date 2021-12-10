@@ -154,7 +154,6 @@ func resolveEscape(text string) (string, error) {
 			text = r.ReplaceAllString(text, value.repl)
 		}
 	}
-	fmt.Println("resolve text:", text)
 	return text, nil
 }
 
@@ -400,8 +399,7 @@ func (e *IdeaService) GetIdeaTypeName(typeId uint) string {
 
 func (e *IdeaService) DeleteIdea(id uint) (err error) {
 	var simple string
-	// FIXME 不会报没有记录
-	if errors.Is(global.IDEA_DB.Debug().Model(&idea.Idea{}).Select("simple").Where("id = ?", id).Find(&simple).Error, gorm.ErrRecordNotFound) {
+	if errors.Is(global.IDEA_DB.Debug().Model(&idea.Idea{}).Select("simple").Where("id = ?", id).First(&simple).Error, gorm.ErrRecordNotFound) {
 		return gorm.ErrRecordNotFound
 	}
 	if simple != "" {
@@ -499,11 +497,11 @@ func LifeCronFunc() {
 		// TODO level 规则
 		if life > getLife(15, 5, 1, float64(w)) {
 			level = 2
-		} else if life < getLife(0, 0, 20, float64(w)) && t < 1*24*60 {
+		} else if life < getLife(0, 0, 20, float64(w)) && t < 1*24 {
 			level = 0
 		}
-		fmt.Println("life", life)
-		fmt.Println("level", level)
+		//fmt.Println("life", life)
+		//fmt.Println("level", level)
 		if err := global.IDEA_DB.Model(&idea.Idea{}).Where("id = ?", v.ID).Update("life", life).Update("level", level).Error; err != nil {
 			global.IDEA_LOG.Error("更新生命值定时任务——更新生命值失败！", zap.Error(err))
 		}
