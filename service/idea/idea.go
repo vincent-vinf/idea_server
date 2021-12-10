@@ -240,7 +240,7 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	//	db = db.Where("content LIKE ?", "%"+ideaInfo.Content+"%")
 	//}
 
-	err = db.Where("level > 0").Count(&total).Error
+	err = db.Where("level > 0 AND content != \"\"").Count(&total).Error
 
 	if err != nil {
 		return err, ideaListResponses, total, len(ideaListResponses)
@@ -270,7 +270,7 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	}
 	for _, v := range ideas {
 		r := []rune(v.Simple)
-		if len(r) > 40 {
+		if len(r) > 60 {
 			v.Simple = string(r[:60])
 		} else {
 			v.Simple = string(r)
@@ -299,7 +299,7 @@ func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes
 		var i idea.Idea
 		if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId).Error, gorm.ErrRecordNotFound) {
 			r := []rune(i.Simple)
-			if len(r) > 40 {
+			if len(r) > 60 {
 				i.Simple = string(r[:60])
 			} else {
 				i.Simple = string(r)
