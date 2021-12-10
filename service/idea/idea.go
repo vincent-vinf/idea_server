@@ -117,7 +117,12 @@ var escapeRegexps = []RepRegexp{
 	// \，注意要 4 个，一定要在 \n 之前
 	{
 		expr: "\\\\",
-		repl: "\\\\",
+		repl: "",
+	},
+	// 空格
+	{
+		expr: "\\s",
+		repl: "",
 	},
 	// 回车
 	{
@@ -133,26 +138,30 @@ var escapeRegexps = []RepRegexp{
 		expr: "\"",
 		repl: "\\\"",
 	},
-	// 空格
-	{
-		expr: "\\s",
-		repl: "",
-	},
 }
 
 type IdeaService struct {
 }
 
-func (e *IdeaService) GetClassification(text string) (typeId uint, err error) {
-	// 解决转义
+// 解决转义
+func resolveEscape(text string) (string, error) {
 	for _, value := range escapeRegexps {
 		//fmt.Println("value", value)
 		if r, err := regexp.Compile(value.expr); err != nil {
 			fmt.Println("正则表示式编译错误", err)
-			return 0, errors.New("获取分类失败——正则表达式编译错误")
+			return "", errors.New("正则表达式编译错误")
 		} else {
 			text = r.ReplaceAllString(text, value.repl)
 		}
+	}
+	fmt.Println("resolve text:", text)
+	return text, nil
+}
+
+func (e *IdeaService) GetClassification(text string) (typeId uint, err error) {
+	text, err = resolveEscape(text)
+	if err != nil {
+		return 0, errors.New("获取分类失败：" + err.Error())
 	}
 	jsonData := "{\"text\": [\"" + text + "\"]}"
 	//fmt.Println("jsonData", jsonData)
@@ -183,15 +192,9 @@ func (e *IdeaService) SimpleContent(content string) string {
 }
 
 func (e *IdeaService) AuditContent(text string) (err error) {
-	// 解决转义
-	for _, value := range escapeRegexps {
-		//fmt.Println("value", value)
-		if r, err := regexp.Compile(value.expr); err != nil {
-			fmt.Println("正则表示式编译错误", err)
-			return errors.New("获取分类失败——正则表达式编译错误")
-		} else {
-			text = r.ReplaceAllString(text, value.repl)
-		}
+	text, err = resolveEscape(text)
+	if err != nil {
+		return errors.New("内容审核失败：" + err.Error())
 	}
 	jsonData := "{\"text\": [\"" + text + "\"]}"
 	res, err := http.Post("http://127.0.0.1:9998/audit_content", "application/json", bytes.NewBuffer([]byte(jsonData)))
@@ -206,13 +209,22 @@ func (e *IdeaService) AuditContent(text string) (err error) {
 	return errors.New(string(data))
 }
 
-func noticeAddingIndexes(text string) (err error) {
-	jsonData := "{\"text\": [\"" + text + "\"]}"
-	_, err = http.Post("http://hlj.vinf.top/model_addsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
-	return
+func noticeAddIndexes(text string) {
+	text, _ = resolveEscape(text)
+	jsonData := "{\"text\": \"" + text + "\"}"
+	http.Post("http://hlj.vinf.top/model_addsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
+}
+
+func noticeDelIndexes(text string) {
+	text, _ = resolveEscape(text)
+	jsonData := "{\"text\": \"" + text + "\"}"
+	http.Post("http://hlj.vinf.top/model_delsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
 }
 
 func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
+	if content == "" {
+		return false, errors.New("内容不能为空")
+	}
 	life := getLife(0, 0, 0, 1)
 	simple := e.SimpleContent(content)
 	//fmt.Println("simple", simple)
@@ -224,11 +236,8 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	}
 
 	// 通知添加索引
-	// TODO 是否需要做多线程
-	//err := noticeAddingIndexes(simple)
-	//if err != nil {
-	//	return false, errors.New("通知添加索引失败：" + err.Error())
-	//}
+	go noticeAddIndexes(simple)
+
 	typeId, _ := e.GetClassification(simple) // 失败则默认 0，无类型
 	i := idea.Idea{
 		UserId:  userId,
@@ -337,12 +346,13 @@ func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes
 		var result []ideaRes.SimilarModelResponse
 		_ = json.Unmarshal(data, &result)
 		fmt.Println("result", result)
-		if len(result) > 5 {
-			result = result[:5]
+		if len(result) > 3 {
+			result = result[:3]
 		}
 		for _, v := range result {
 			var i idea.Idea
-			if !errors.Is(global.IDEA_DB.Where("level > 0 AND deleted_at IS NULL").First(&i, v.IdeaId+1).Error, gorm.ErrRecordNotFound) {
+			// 防止相似服务那未成功删除
+			if !errors.Is(global.IDEA_DB.Where("level > 0").First(&i, v.IdeaId+1).Error, gorm.ErrRecordNotFound) {
 				r := []rune(i.Simple)
 				if len(r) > 60 {
 					i.Simple = string(r[:60])
@@ -358,8 +368,8 @@ func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes
 		}
 		return
 	}
-	similarIdeas = make([]ideaRes.SimilarIdea, 0, 5)
-	for j := 0; j < 5; j++ {
+	similarIdeas = make([]ideaRes.SimilarIdea, 0, 3)
+	for j := 0; j < 3; j++ {
 		var i idea.Idea
 		err = global.IDEA_DB.Find(&i, j+1).Error
 		if err != nil {
@@ -388,6 +398,24 @@ func (e *IdeaService) GetIdeaTypeName(typeId uint) string {
 	return t.Name
 }
 
+func (e *IdeaService) DeleteIdea(id uint) (err error) {
+	var simple string
+	// FIXME 不会报没有记录
+	if errors.Is(global.IDEA_DB.Debug().Model(&idea.Idea{}).Select("simple").Where("id = ?", id).Find(&simple).Error, gorm.ErrRecordNotFound) {
+		return gorm.ErrRecordNotFound
+	}
+	if simple != "" {
+		err = global.IDEA_DB.Delete(&idea.Idea{}, id).Error
+		if err != nil {
+			return err
+		}
+
+		// 确保数据库删除成功后再做删除
+		go noticeDelIndexes(simple)
+	}
+	return
+}
+
 func getLife(p, r, t, w float64) float64 {
 	g := 1.194
 	score := (p + 1.5*r + 20) / (math.Pow(t+2, g/w))
@@ -413,7 +441,7 @@ func LifeCronFunc() {
 	//fmt.Println(getLife(0, 0, 40, 1))
 
 	var ids []LifeCronField
-	if err := global.IDEA_DB.Model(&idea.Idea{}).Where("level > 0 AND id > 3988").Find(&ids).Error; err != nil {
+	if err := global.IDEA_DB.Model(&idea.Idea{}).Where("level > 0").Find(&ids).Error; err != nil {
 		global.IDEA_LOG.Error("更新生命值定时任务——获取想法 id 列表失败！", zap.Error(err))
 		return
 	}

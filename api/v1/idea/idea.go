@@ -100,5 +100,12 @@ func (e *IdeaApi) UpdateIdea(c *gin.Context) {
 }
 
 func (e *IdeaApi) DeleteIdea(c *gin.Context) {
-
+	var info request.GetById
+	_ = c.ShouldBindJSON(&info)
+	if err := ideaService.DeleteIdea(info.Uint()); err != nil {
+		global.IDEA_LOG.Error("删除想法失败", zap.Error(err))
+		response.FailWithMessage("删除想法失败", c)
+	} else {
+		response.OkWithMessage("删除想法成功", c)
+	}
 }
