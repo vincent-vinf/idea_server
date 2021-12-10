@@ -68,7 +68,7 @@ func (u *UserBaseService) Register(regInfo request.Register) (bool, error) {
 
 
 	// 新建用户
-	err = global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd, Avatar: string(data)}).Error
+	err = global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd, Avatar: string(data), Weight: 1}).Error
 	if  err != nil {
 		return false, err
 	}

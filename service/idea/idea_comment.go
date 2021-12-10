@@ -8,18 +8,25 @@ import (
 	ideaRes "idea_server/model/idea/response"
 )
 
+var ideaService = new(IdeaService)
+
 type IdeaCommentService struct {
 }
 
-func (e *IdeaCommentService) CreateComment(info *idea.IdeaComment) error {
+func (e *IdeaCommentService) CreateComment(info *idea.IdeaComment) (err error) {
 	db := global.IDEA_DB
+
+	err = ideaService.AuditContent(info.Content)
+	if err != nil {
+		return err
+	}
 
 	// 类似这种判断，示例
 	if errors.Is(db.Where("id = ?", info.IdeaId).First(&idea.Idea{}).Error, gorm.ErrRecordNotFound) { // 判断想法是否存在
 		return errors.New("想法不存在")
 	}
 
-	err := db.Create(info).Error
+	err = db.Create(info).Error
 	if err != nil {
 		return err
 	}

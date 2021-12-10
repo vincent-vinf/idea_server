@@ -23,7 +23,7 @@ func (e *IdeaCommentApi) CreateComment(c *gin.Context) {
 	}
 	if err := ideaCommentService.CreateComment(&info); err != nil {
 		global.IDEA_LOG.Error("创建评论失败", zap.Error(err))
-		response.FailWithMessage("创建评论失败", c)
+		response.FailWithDetailed(err.Error(),"创建评论失败", c)
 	} else {
 		response.OkWithMessage("创建评论成功", c)
 	}

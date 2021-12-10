@@ -384,7 +384,7 @@ func getLife(p, r, t float64) float64 {
 	return score
 }
 
-func (e *IdeaService) LifeCronFunc() {
+func LifeCronFunc() {
 	var ideas []idea.Idea
 	if err := global.IDEA_DB.Where("level > 0").Find(&ideas).Error; err != nil {
 		global.IDEA_LOG.Error("更新生命值定时任务——获取想法列表失败！", zap.Error(err))
@@ -410,7 +410,7 @@ func (e *IdeaService) LifeCronFunc() {
 		// TODO level 规则
 		if life > 11 {
 			level = 2
-		} else if life < 0.5 && t > 1*24*60 {
+		} else if life < 0.5 && t < 1*24*60 {
 			level = 0
 		}
 		if err := global.IDEA_DB.Model(&v).Update("life", life).Update("level", level).Error; err != nil {
@@ -419,10 +419,6 @@ func (e *IdeaService) LifeCronFunc() {
 	}
 	global.IDEA_LOG.Info("更新生命值定时任务——成功！")
 	fmt.Println("更新生命值定时任务——成功！")
-}
-
-func (e *IdeaService) UserWeightCronFunc() {
-
 }
 
 func (e *IdeaService) Convert() {

@@ -9,6 +9,7 @@ type User struct {
 	Email    string `json:"email"`
 	Passwd   string `json:"passwd"`
 	Avatar   string `json:"avatar"`
+	Weight   uint   `json:"weight"`
 }
 
 // TableName User 表名
