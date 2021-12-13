@@ -13,3 +13,13 @@ type UserInfoResponse struct {
 	user.User
 	IsFollow bool `json:"isFollow"`
 }
+
+type NoticeField struct {
+	ID   uint `json:"id"`
+	Type uint `json:"type"`
+}
+
+type NoticeResponse struct {
+	NoticeField
+	Data interface{} `json:"data"`
+}

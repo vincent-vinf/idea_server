@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"idea_server/global"
+	"idea_server/model/common/request"
 	"idea_server/model/idea"
 	"idea_server/model/user"
 	userRes "idea_server/model/user/response"
@@ -31,6 +32,54 @@ func (e *UserService) GetUserInfo(ids []int, userId uint) (infos []userRes.UserI
 func (e *UserService) GetUserWeight(id uint) (weight uint, err error) {
 	err = global.IDEA_DB.Model(&user.User{}).Where("id = ?", id).Select("weight").Find(&weight).Error
 	return
+}
+
+func (e *UserService) Notice(pageInfo request.PageInfo, userId uint) (err error, list []userRes.NoticeResponse, num int) {
+	limit := pageInfo.PageSize
+	offset := pageInfo.PageSize * (pageInfo.Page - 1)
+
+	var results []userRes.NoticeField
+	err = global.IDEA_DB.Raw("SELECT *\nFROM (\n\tSELECT id, 1 type, created_at FROM `like` WHERE user_id != ? AND idea_id in (SELECT id FROM ideas WHERE user_id = ? AND deleted_at IS NULL)\n\tUNION\n\tSELECT id, 2 type, created_at FROM `follow` WHERE followed_id = ?\n\tUNION\n\tSELECT id, 3 type, created_at FROM `comment` WHERE user_id != ? AND to_id != ? AND idea_id in (SELECT id FROM ideas WHERE user_id = ? AND deleted_at IS NULL)\n\tUNION\n\tSELECT id, 4 type, created_at FROM `comment` WHERE to_id = ?\n) AS a\nORDER BY created_at DESC\nLIMIT ?\nOFFSET ?", userId, userId, userId, userId, userId, userId, userId, limit, offset).Scan(&results).Error
+	if err != nil {
+		return err, make([]userRes.NoticeResponse, 0, 1), 0
+	}
+	list = make([]userRes.NoticeResponse, 0, len(results))
+	for _, v := range results {
+		switch v.Type {
+		case 1: // 点赞你发的帖，取消点赞即 deleted_at 不为 NULL
+			var data idea.IdeaLike
+			err = global.IDEA_DB.Raw("SELECT * FROM `like` WHERE id = ?", v.ID).Scan(&data).Error
+			if err == nil {
+				list = append(list, userRes.NoticeResponse{
+					NoticeField: v,
+					Data:        data,
+				})
+			}
+			break
+		case 2: // 用户关注，与点赞同理
+			var data user.UserFollow
+			err = global.IDEA_DB.Raw("SELECT * FROM `follow` WHERE id = ?", v.ID).Scan(&data).Error
+			if err == nil {
+				list = append(list, userRes.NoticeResponse{
+					NoticeField: v,
+					Data:        data,
+				})
+			}
+			break
+		case 3, 4: // 3 回复你发的帖子的评论（作者回复自己的帖） 4 回复你的评论
+			var data idea.IdeaComment
+			err = global.IDEA_DB.Raw("SELECT * FROM `comment` WHERE id = ?", v.ID).Scan(&data).Error
+			if err == nil {
+				list = append(list, userRes.NoticeResponse{
+					NoticeField: v,
+					Data:        data,
+				})
+			}
+			break
+		}
+
+	}
+	return err, list, len(list)
 }
 
 func getWeight(pGet, pSend, rGet, rSent, pOstnum, fOcusnum float64) uint {

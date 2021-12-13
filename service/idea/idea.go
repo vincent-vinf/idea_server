@@ -24,6 +24,7 @@ import (
 var ideaCommentService = new(IdeaCommentService)
 var ideaLikeService = new(IdeaLikeService)
 var userService = new(user.UserService)
+var userFollowService = new(user.UserFollowService)
 
 type RepRegexp struct {
 	expr string
@@ -278,6 +279,74 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 	//db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
 	//db := global.IDEA_DB.Debug().Model(&idea.Idea{}) // debug
 	db := global.IDEA_DB.Model(&idea.Idea{})
+	var ideas []idea.Idea
+	ideaListResponses := make([]ideaRes.IdeaListResponse, 0, pageInfo.PageSize)
+
+	// 添加一些条件
+	//if ideaInfo.Content != "" {
+	//	db = db.Where("content LIKE ?", "%"+ideaInfo.Content+"%")
+	//}
+	if ideaInfo.UserId != 0 {
+		db = db.Where("user_id = ?", ideaInfo.UserId)
+	}
+
+	err = db.Where("level > 0 AND content != \"\"").Count(&total).Error
+
+	if err != nil {
+		return err, ideaListResponses, total, len(ideaListResponses)
+	} else {
+		db = db.Limit(limit).Offset(offset)
+		if order != "" {
+			var OrderStr string
+			// 设置有效排序key 防止sql注入
+			// 感谢 Tom4t0 提交漏洞信息
+			orderMap := make(map[string]bool, 2)
+			orderMap["life"] = true
+			orderMap["updated_at"] = true
+			if orderMap[order] {
+				if desc {
+					OrderStr = order + " desc"
+				} else {
+					OrderStr = order
+				}
+			}
+
+			db = db.Order(OrderStr)
+			err = db.Error
+		}
+		if err == nil {
+			err = db.Order("created_at desc").Find(&ideas).Error
+		}
+	}
+	for _, v := range ideas {
+		r := []rune(v.Simple)
+		if len(r) > 60 {
+			v.Simple = string(r[:60])
+		} else {
+			v.Simple = string(r)
+		}
+		v.Life = math.Trunc(v.Life*1e4+0.5) * 1e-4
+		response := ideaRes.IdeaListResponse{
+			Idea:      v,
+			IsLike:    ideaLikeService.IsLike(userId, v.ID),
+			LikeCount: ideaLikeService.GetLikeCount(v.ID),
+			TypeName:  e.GetIdeaTypeName(v.TypeId),
+		}
+		ideaListResponses = append(ideaListResponses, response)
+	}
+	return err, ideaListResponses, total, len(ideaListResponses)
+}
+
+func (e *IdeaService) GetFollowIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo, order string, desc bool, userId uint) (err error, list interface{}, total int64, num int) {
+	followIds, err := userFollowService.GetFollowList(userId)
+	if err != nil {
+		return err, make([]interface{}, 0, 1), 0, 0
+	}
+	limit := pageInfo.PageSize
+	offset := pageInfo.PageSize * (pageInfo.Page - 1)
+	//db := global.IDEA_DB.Model(&idea.Idea{}).Omit("content")
+	//db := global.IDEA_DB.Debug().Model(&idea.Idea{}) // debug
+	db := global.IDEA_DB.Model(&idea.Idea{}).Where("user_id in ?", followIds)
 	var ideas []idea.Idea
 	ideaListResponses := make([]ideaRes.IdeaListResponse, 0, pageInfo.PageSize)
 

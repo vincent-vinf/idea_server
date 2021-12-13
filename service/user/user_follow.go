@@ -8,7 +8,6 @@ import (
 )
 
 type UserFollowService struct {
-
 }
 
 func (e *UserFollowService) CreateFollow(followedId, followId uint) (err error) {
@@ -38,4 +37,12 @@ func (e *UserFollowService) IsFollow(followedId, followId uint) bool {
 		return false
 	}
 	return true
+}
+
+func (e *UserFollowService) GetFollowList(userId uint) (list []uint, err error) {
+	err = global.IDEA_DB.Model(&user.UserFollow{}).Where("follow_id = ?", userId).Select("followed_id").Find(&list).Error
+	if err != nil {
+		return make([]uint, 0, 1), err
+	}
+	return list, err
 }

@@ -48,6 +48,29 @@ func (e *IdeaApi) GetIdeaList(c *gin.Context) {
 	}
 }
 
+func (e *IdeaApi) GetFollowIdeaList(c *gin.Context) {
+	var info ideaReq.SearchIdeaParams
+	_ = c.ShouldBindJSON(&info)
+
+	if err := utils.Verify(info.PageInfo, utils.PageInfoVerify); err != nil {
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+
+	if err, list, total, num := ideaService.GetFollowIdeaList(info.Idea, info.PageInfo, info.OrderKey, info.Desc, utils.GetJwtId(c)); err != nil {
+		global.IDEA_LOG.Error("获取关注想法列表失败!", zap.Error(err))
+		response.FailWithMessage("获取关注想法列表失败", c)
+	} else {
+		response.OkWithDetailed(response.PageResult{
+			List:     list,
+			Total:    total,
+			Num:      num,
+			Page:     info.Page,
+			PageSize: info.PageSize,
+		}, "获取关注想法列表成功", c)
+	}
+}
+
 func (e *IdeaApi) GetMyIdeaList(c *gin.Context) {
 	var info ideaReq.SearchIdeaParams
 	_ = c.ShouldBindJSON(&info)
