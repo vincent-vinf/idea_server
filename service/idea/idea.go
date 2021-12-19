@@ -11,7 +11,8 @@ import (
 	"idea_server/model/common/request"
 	"idea_server/model/idea"
 	ideaRes "idea_server/model/idea/response"
-	"idea_server/service/user"
+	"idea_server/model/user"
+	userSer "idea_server/service/user"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -23,8 +24,8 @@ import (
 
 var ideaCommentService = new(IdeaCommentService)
 var ideaLikeService = new(IdeaLikeService)
-var userService = new(user.UserService)
-var userFollowService = new(user.UserFollowService)
+var userService = new(userSer.UserService)
+var userFollowService = new(userSer.UserFollowService)
 
 type RepRegexp struct {
 	expr string
@@ -52,10 +53,10 @@ var mdRegexps = []RepRegexp{
 		expr: "<\\/?.+?\\/?>",
 		repl: "",
 	},
-	// 全局匹配内联代码块
+	// 全局匹配斜体
 	{
 		expr: "(\\*)(.*?)(\\*)",
-		repl: "",
+		repl: "${2}",
 	},
 	// 全局匹配内联代码块
 	{
@@ -166,13 +167,15 @@ func (e *IdeaService) GetClassification(text string) (typeId uint, err error) {
 	jsonData := "{\"text\": [\"" + text + "\"]}"
 	//fmt.Println("jsonData", jsonData)
 	res, _ := http.Post("http://hlj.vinf.top/model_classfication", "application/json", bytes.NewBuffer([]byte(jsonData)))
-	defer res.Body.Close()
-	if res.StatusCode == 200 {
-		data, _ := ioutil.ReadAll(res.Body)
-		var m []uint
-		_ = json.Unmarshal(data, &m)
-		//fmt.Println("m", m)
-		return m[0], nil
+	if res != nil {
+		defer res.Body.Close()
+		if res.StatusCode == 200 {
+			data, _ := ioutil.ReadAll(res.Body)
+			var m []uint
+			_ = json.Unmarshal(data, &m)
+			//fmt.Println("m", m)
+			return m[0], nil
+		}
 	}
 	return 0, errors.New("http 请求失败")
 }
@@ -198,27 +201,45 @@ func (e *IdeaService) AuditContent(text string) (err error) {
 	}
 	jsonData := "{\"text\": [\"" + text + "\"]}"
 	res, err := http.Post("http://127.0.0.1:9998/audit_content", "application/json", bytes.NewBuffer([]byte(jsonData)))
-	if res.StatusCode != 200 {
-		// 服务出错
-		return err
+	// 关闭 http 响应体
+	if res != nil {
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			// 服务出错
+			return err
+		}
+		data, _ := ioutil.ReadAll(res.Body)
+		if string(data) == "合规" {
+			return nil
+		}
+		return errors.New(string(data))
 	}
-	data, _ := ioutil.ReadAll(res.Body)
-	if string(data) == "合规" {
-		return nil
-	}
-	return errors.New(string(data))
+	return errors.New("无法访问文本审核服务")
 }
 
-func noticeAddIndexes(text string) {
+func noticeAddIndexes(text string) (err error) {
 	text, _ = resolveEscape(text)
 	jsonData := "{\"text\": \"" + text + "\"}"
-	http.Post("http://hlj.vinf.top/model_addsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	res, _ := http.Post("http://hlj.vinf.top/model_addsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	if res != nil {
+		defer res.Body.Close()
+		data, _ := ioutil.ReadAll(res.Body)
+		var str string
+		_ = json.Unmarshal(data, &str)
+		if str == "add success" {
+			return nil
+		}
+	}
+	return errors.New("存在重复想法")
 }
 
 func noticeDelIndexes(text string) {
 	text, _ = resolveEscape(text)
 	jsonData := "{\"text\": \"" + text + "\"}"
-	http.Post("http://hlj.vinf.top/model_delsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	res, _ := http.Post("http://hlj.vinf.top/model_delsentence", "application/json", bytes.NewBuffer([]byte(jsonData)))
+	if res != nil {
+		defer res.Body.Close()
+	}
 }
 
 func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
@@ -236,7 +257,10 @@ func (e *IdeaService) CreateIdea(userId uint, content string) (bool, error) {
 	}
 
 	// 通知添加索引
-	go noticeAddIndexes(simple)
+	err = noticeAddIndexes(simple)
+	if err != nil {
+		return false, err
+	}
 
 	typeId, _ := e.GetClassification(simple) // 失败则默认 0，无类型
 	i := idea.Idea{
@@ -327,10 +351,11 @@ func (e *IdeaService) GetIdeaList(ideaInfo idea.Idea, pageInfo request.PageInfo,
 		}
 		v.Life = math.Trunc(v.Life*1e4+0.5) * 1e-4
 		response := ideaRes.IdeaListResponse{
-			Idea:      v,
-			IsLike:    ideaLikeService.IsLike(userId, v.ID),
-			LikeCount: ideaLikeService.GetLikeCount(v.ID),
-			TypeName:  e.GetIdeaTypeName(v.TypeId),
+			Idea:        v,
+			HeartStatus: getHeartStatus(v.Life, v.UserId),
+			IsLike:      ideaLikeService.IsLike(userId, v.ID),
+			LikeCount:   ideaLikeService.GetLikeCount(v.ID),
+			TypeName:    e.GetIdeaTypeName(v.TypeId),
 		}
 		ideaListResponses = append(ideaListResponses, response)
 	}
@@ -406,35 +431,39 @@ func (e *IdeaService) GetFollowIdeaList(ideaInfo idea.Idea, pageInfo request.Pag
 }
 
 func (e *IdeaService) GetSimilarIdeasByText(text string) (similarIdeas []ideaRes.SimilarIdea, err error) {
+	text = e.SimpleContent(text)
+	text, _ = resolveEscape(text)
 	jsonData := "{\"text\": \"" + text + "\"}"
 	res, _ := http.Post("http://hlj.vinf.top/model_findsimilar", "application/json", bytes.NewBuffer([]byte(jsonData)))
-	defer res.Body.Close()
-	if res.StatusCode == 200 {
-		data, _ := ioutil.ReadAll(res.Body)
-		var result []ideaRes.SimilarModelResponse
-		_ = json.Unmarshal(data, &result)
-		fmt.Println("result", result)
-		if len(result) > 3 {
-			result = result[:3]
-		}
-		for _, v := range result {
-			var i idea.Idea
-			// 防止相似服务那未成功删除
-			if !errors.Is(global.IDEA_DB.Where("level > 0").First(&i, v.IdeaId+1).Error, gorm.ErrRecordNotFound) {
-				r := []rune(i.Simple)
-				if len(r) > 60 {
-					i.Simple = string(r[:60])
-				} else {
-					i.Simple = string(r)
-				}
-				similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
-					Idea:       i,
-					Similarity: v.Similarity,
-					TypeName:   e.GetIdeaTypeName(i.TypeId),
-				})
+	if res != nil {
+		defer res.Body.Close()
+		if res.StatusCode == 200 {
+			data, _ := ioutil.ReadAll(res.Body)
+			var result []ideaRes.SimilarModelResponse
+			_ = json.Unmarshal(data, &result)
+			//fmt.Println("result", result)
+			if len(result) > 3 {
+				result = result[:3]
 			}
+			for _, v := range result {
+				var i idea.Idea
+				// 防止相似服务那未成功删除
+				if !errors.Is(global.IDEA_DB.Where("level > 0").First(&i, v.IdeaId+1).Error, gorm.ErrRecordNotFound) {
+					r := []rune(i.Simple)
+					if len(r) > 60 {
+						i.Simple = string(r[:60])
+					} else {
+						i.Simple = string(r)
+					}
+					similarIdeas = append(similarIdeas, ideaRes.SimilarIdea{
+						Idea:       i,
+						Similarity: v.Similarity,
+						TypeName:   e.GetIdeaTypeName(i.TypeId),
+					})
+				}
+			}
+			return
 		}
-		return
 	}
 	similarIdeas = make([]ideaRes.SimilarIdea, 0, 3)
 	for j := 0; j < 3; j++ {
@@ -481,6 +510,22 @@ func (e *IdeaService) DeleteIdea(id uint) (err error) {
 		go noticeDelIndexes(simple)
 	}
 	return
+}
+
+func getHeartStatus(life float64, userId uint) int {
+	var weight int64
+	global.IDEA_DB.Model(&user.User{}).Where("id = ?", userId).Select("weight").Find(&weight)
+	//fmt.Println("life", life)
+	fmt.Println(getLife(0, 0, 20, float64(weight)))
+	if life < getLife(0, 0, 20, float64(weight)) {
+		return 1
+	} else if life < getLife(0, 0, 0, float64(weight)) {
+		return 2
+	} else if life < getLife(15, 5, 1, float64(weight)) {
+		return 3
+	} else {
+		return 4
+	}
 }
 
 func getLife(p, r, t, w float64) float64 {
@@ -579,6 +624,7 @@ func LifeCronFunc() {
 	fmt.Println("更新生命值定时任务——成功！")
 }
 
+// Convert 数据处理（废弃）
 func (e *IdeaService) Convert() {
 	var count int64
 	global.IDEA_DB.Model(&idea.Idea{}).Count(&count)

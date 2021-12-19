@@ -12,7 +12,7 @@ import (
 func Cron() (err error) {
 	c := cron.New(cron.WithSeconds())
 
-	spec := "00 00 */1 * * ?"
+	spec := "00 */5 * * * ?"
 	//spec := "*/5 * * * * ?"
 	_, err = c.AddFunc(spec, idea.LifeCronFunc)
 	_, err = c.AddFunc(spec, user.UserWeightCronFunc)

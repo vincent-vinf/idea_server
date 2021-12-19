@@ -29,7 +29,6 @@ var (
 )
 
 type UserBaseService struct {
-
 }
 
 func (u *UserBaseService) Login(email, passwd string) bool {
@@ -59,20 +58,20 @@ func (u *UserBaseService) Register(regInfo request.Register) (bool, error) {
 		return false, err
 	}
 
-	avatarInfo := "{\"userId\": \"" + strconv.Itoa(maxId + 1)  + "\"}"
+	avatarInfo := "{\"userId\": \"" + strconv.Itoa(maxId+1) + "\"}"
 	res, _ := http.Post("http://127.0.0.1:9998/get_avatar_url", "application/json", bytes.NewBuffer([]byte(avatarInfo)))
-	data, _ := ioutil.ReadAll(res.Body)
-	if res.StatusCode != 200 {
-		return false, errors.New(string(data))
+	if res != nil {
+		defer res.Body.Close()
+		data, _ := ioutil.ReadAll(res.Body)
+		if res.StatusCode != 200 {
+			return false, errors.New(string(data))
+		}
+		// 新建用户
+		err = global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd, Avatar: string(data), Weight: 1}).Error
+		if err != nil {
+			return false, err
+		}
 	}
-
-
-	// 新建用户
-	err = global.IDEA_DB.Create(&user.User{Email: regInfo.Email, Username: regInfo.Username, Passwd: regInfo.Passwd, Avatar: string(data), Weight: 1}).Error
-	if  err != nil {
-		return false, err
-	}
-
 	return true, nil
 }
 
@@ -104,7 +103,6 @@ func (u *UserBaseService) GetID(email string) string {
 	return strconv.Itoa(int(u2.ID))
 }
 
-
 func (u *UserBaseService) IsExistEmail(email string) (bool, error) {
 	if err := global.IDEA_DB.Where("email = ?", email).First(&user.User{}).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -135,4 +133,3 @@ func (u *UserBaseService) IsAllowedIP(ip string) bool {
 		return false
 	}
 }
-

@@ -28,10 +28,15 @@ func (u *UserBaseApi) Register(c *gin.Context) {
 	if ok {
 		loginData := "{\"email\": \"" + msg.Email + "\", \"passwd\": \"" + msg.Passwd + "\"}"
 		res, _ := http.Post("http://127.0.0.1:"+strconv.Itoa(global.IDEA_CONFIG.System.Addr)+"/login", "application/json", bytes.NewBuffer([]byte(loginData)))
-		data, _ := ioutil.ReadAll(res.Body)
-		m := make(map[string]interface{})
-		_ = json.Unmarshal(data, &m)
-		response.OkWithDetailed(m, "注册成功", c)
+		if res != nil {
+			defer res.Body.Close()
+			data, _ := ioutil.ReadAll(res.Body)
+			m := make(map[string]interface{})
+			_ = json.Unmarshal(data, &m)
+			response.OkWithDetailed(m, "注册成功", c)
+		} else {
+			response.FailWithMessage("登录失败", c)
+		}
 	} else {
 		global.IDEA_LOG.Error("注册失败", zap.Error(err))
 		response.FailWithMessage("注册失败", c)
